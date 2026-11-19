@@ -60,10 +60,11 @@ Run state and reports are stored in `<project>/.claude/personal/`. Add this fold
 
 ## Updating
 
-The maintainer edits the files, bumps `version` in `plugins/dispatcher/.claude-plugin/plugin.json` and pushes. Everyone else pulls the update with:
+The maintainer edits the files, bumps `version` in `plugins/dispatcher/.claude-plugin/plugin.json` and pushes. Everyone else refreshes the catalog, then updates the installed plugin and restarts Claude Code:
 
 ```
 claude plugin marketplace update team-plugins
+claude plugin update dispatcher@team-plugins
 ```
 
 Auto-update is off by default for private marketplaces.

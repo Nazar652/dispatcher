@@ -70,16 +70,22 @@ Both commands take `show`, `set`, `remove`, `replace` and `clear`, or free text,
 
 ### Agent models
 
-The `## Agent models` section of either file picks a model per agent, one line per role:
+The `## Agent models` section of either file sets the model and the reasoning effort per agent, one line per role, with one or both fields:
 
 ```
 ## Agent models
 
-- developer: opus
-- researcher: haiku
+- developer: model=claude-opus-5-1 effort=high
+- researcher: model=haiku
+- architect: effort=max
 ```
 
-Valid models are `sonnet`, `opus`, `haiku` and `fable`. For each agent `/dispatch` uses the project setting, then the global one, then the agent's built-in default, and passes the result when it starts the agent. A running agent keeps its model; a change applies the next time that agent is started fresh.
+- `model`: an alias (`sonnet`, `opus`, `haiku`, `fable`), which always means the latest version, or a full model ID such as `claude-opus-5-1` to pin a version.
+- `effort`: `low`, `medium`, `high`, `xhigh` or `max`.
+
+Each field is resolved on its own: the project file first, then the global file, then the default. The default model is the agent's own (`opus` for the architect and reviewers, `sonnet` for the others) in its latest version; the default effort is whatever Claude Code picks for that agent. A running agent keeps its model and effort; a change applies the next time that agent is started fresh.
+
+The model is applied by the plugin's `agent.spawn` hook (`hooks/agent-models.ts`), because the Agent tool itself only accepts aliases. `/dispatch` passes the effort when it starts each agent. Setting effort needs Claude Code 2.1.292 or newer.
 
 ### In each project
 
@@ -113,10 +119,12 @@ skills/                              dispatch, dispatch-status, dispatch-resume,
                                      dispatch-settings, dispatch-global-settings
 agents/                              the seven specialist agents
 hooks/hooks.json                     plugin hooks
+hooks/agent-models.ts                agent.spawn hook that applies per-agent models (tests next to it)
 scripts/                             Python scripts used by the hooks
 ```
 
 Hooks:
 
+- `agent-models.ts` (`agent.spawn`) sets the model of each fresh `dispatcher:*` agent from the settings files, unless the orchestrator passed one explicitly.
 - `guard_report_write.py` (PreToolUse on Write and Edit) lets the architect, manual tester, reviewers and researcher only create their own reports in `.claude/personal/.dispatcher/runs/<task>/reports/<role>/`. It does not affect the main session, the `developer` agent or any other agent.
 - `restore_dispatch_orchestrator.py` (SessionStart after compact or resume) reminds the main session of its orchestrator role. It only fires in a session that actually started `/dispatch`.

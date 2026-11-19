@@ -55,7 +55,7 @@ Delegate directly from the main conversation to:
 - `security-reviewer` when classified `REQUIRED`;
 - `database-reviewer` when classified `REQUIRED`.
 
-These specialists ship with the dispatcher plugin. Always dispatch them by their plugin-scoped agent type, `dispatcher:<role>` (for example `dispatcher:architect`), never the bare role name, which may resolve to an unrelated user or project agent. Pass the model resolved under Workflow settings > Agent models. Elsewhere this workflow refers to them by role name only.
+These specialists ship with the dispatcher plugin. Always dispatch them by their plugin-scoped agent type, `dispatcher:<role>` (for example `dispatcher:architect`), never the bare role name, which may resolve to an unrelated user or project agent. Apply Workflow settings > Agent models to every such dispatch. Elsewhere this workflow refers to them by role name only.
 
 Never ask a subagent to delegate work to another subagent.
 
@@ -248,9 +248,20 @@ Legacy locations: if `<project-root>/.claude/personal/project.md`, `<project-roo
 
 ### Agent models
 
-Both settings files may contain an `## Agent models` section with one line per role, for example `- developer: opus`. Valid values are the model aliases `sonnet`, `opus`, `haiku`, and `fable`; ignore and report any other value.
+Both settings files may contain an `## Agent models` section with one line per role, for example:
 
-For every specialist dispatch or fresh replacement, resolve the role's model in this order: current explicit user instruction, project settings, global settings. When one is found, pass it as the Agent tool's `model` parameter; otherwise omit the parameter so the agent's own default applies. Record the resolved model and its source per role in state.md. A resumed or continued agent keeps the model it was started with; a changed setting applies only when that role is next created fresh.
+```
+- developer: model=claude-opus-5-1 effort=high
+- researcher: model=haiku
+- architect: effort=max
+```
+
+`model` is an alias (`sonnet`, `opus`, `haiku`, `fable`) or a full model ID (`claude-...`). `effort` is `low`, `medium`, `high`, `xhigh`, or `max`. Each field resolves on its own, highest first: current explicit user instruction, project settings, global settings. A field set nowhere keeps its default: the agent's own model in its latest version, and the effort Claude Code chooses for that agent.
+
+- Model: the plugin's `agent.spawn` hook (`hooks/agent-models.ts`) reads both settings files and sets the model of every fresh `dispatcher:*` agent, because the Agent tool's `model` parameter accepts aliases only. Do not pass `model` for a value that comes from settings. Pass `model` only when the user explicitly asks in the conversation for a model for that run; that wins over settings. If the user asks for a full model ID in the conversation, explain that it can only come from settings and offer `/dispatch-settings`.
+- Effort: pass the resolved `effort` as the Agent tool's `effort` parameter on every specialist dispatch or fresh replacement; omit the parameter when no level is resolved.
+- Record the resolved model and effort and their sources per role in state.md. A resumed or continued agent keeps the model and effort it was started with; a changed setting applies only when that role is next created fresh.
+- Ignore and report a setting with an unknown role, model, or effort value.
 
 ## Durable run state
 

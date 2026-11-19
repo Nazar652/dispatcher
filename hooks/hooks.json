@@ -24,5 +24,8 @@
         ]
       }
     ]
-  }
+  },
+  "modules": [
+    "./agent-models.ts"
+  ]
 }

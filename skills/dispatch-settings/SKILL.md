@@ -32,7 +32,7 @@ Examples:
 
 `/dispatch-settings set Do not run tests or linters without separate permission.`
 
-`/dispatch-settings set use opus for the developer agent`
+`/dispatch-settings set use claude-opus-5-1 with high effort for the developer agent`
 
 `/dispatch-settings remove the rule about running pytest`
 
@@ -113,12 +113,15 @@ Use `Write` or `Edit` for the exact settings file. These tools are intentionally
 
 ## Agent models
 
-The `## Agent models` section holds one line per specialist role, for example:
+The `## Agent models` section holds one line per specialist role with one or both fields, for example:
 
-- `- developer: opus`
-- `- researcher: haiku`
+- `- developer: model=claude-opus-5-1 effort=high`
+- `- researcher: model=haiku`
+- `- architect: effort=max`
 
-Valid roles: `architect`, `developer`, `manual-tester`, `code-reviewer`, `security-reviewer`, `database-reviewer`, `researcher`. Valid models: `sonnet`, `opus`, `haiku`, `fable`. Translate requests such as "use opus for the developer" into this form. Refuse any other role or model, including full model IDs, and list the valid values. A role without a line uses the global setting, then the agent's built-in default.
+Valid roles: `architect`, `developer`, `manual-tester`, `code-reviewer`, `security-reviewer`, `database-reviewer`, `researcher`. Valid `model` values: the aliases `sonnet`, `opus`, `haiku`, `fable` (always the latest version), or a full model ID starting with `claude-` (a pinned version). Valid `effort` values: `low`, `medium`, `high`, `xhigh`, `max`.
+
+Translate requests such as "use opus 5.1 for the developer with high reasoning" into this exact form; ask when a version is ambiguous instead of guessing an ID. Refuse any other role or value and list the valid ones. A full model ID is checked only for its form here; tell the human that a mistyped ID fails when that agent is started. A field left out falls back to the other settings file, then to the default: the agent's own model in its latest version, and the effort Claude Code chooses.
 
 ## Show operation
 
@@ -127,7 +130,7 @@ For `show`:
 1. Resolve the project root.
 2. Read the project `settings.md` if it exists and display its contents, or report `NO_PROJECT_SETTINGS`.
 3. Read `~/.claude/personal/.dispatcher/settings.md` if it exists and list which of its settings this project overrides, or report `NO_GLOBAL_SETTINGS`.
-4. Show the effective model per agent role and where it comes from (`project`, `global`, or `agent default`).
+4. Show the effective model and effort per agent role and where each comes from (`project`, `global`, or `default`).
 5. Do not create or modify files.
 
 ## Set operation

@@ -1,5 +1,5 @@
 {
   "name": "dispatcher",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Guided multi-agent development workflow: /dispatch with architect, developer, manual-tester and reviewer subagents, plus /dispatch-status, /dispatch-resume, /dispatch-cancel and /dispatch-settings."
 }

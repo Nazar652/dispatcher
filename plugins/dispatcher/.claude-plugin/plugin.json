@@ -1,6 +1,0 @@
-{
-  "name": "dispatcher",
-  "version": "1.0.0",
-  "description": "Guided multi-agent development workflow: /develop with architect, developer, manual-tester and reviewer subagents, plus /dev-status, /dev-resume, /dev-cancel and /dev-settings.",
-  "dependencies": ["playwright@claude-plugins-official"]
-}

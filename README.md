@@ -21,15 +21,15 @@ The agents are `architect`, `developer`, `manual-tester`, `code-reviewer`, `secu
 From a git repository:
 
 ```
-claude plugin marketplace add <org>/<repo>
-claude plugin install dispatcher@team-plugins
+claude plugin marketplace add Nazar652/dispatcher
+claude plugin install dispatcher@dispatcher
 ```
 
 From a local folder, without git:
 
 ```
 claude plugin marketplace add /path/to/repo
-claude plugin install dispatcher@team-plugins
+claude plugin install dispatcher@dispatcher
 ```
 
 You can run the same commands inside a session as `/plugin marketplace add ...` and `/plugin install ...`. Start a new session afterwards so the plugin loads.
@@ -41,14 +41,14 @@ For a private repository, git must work without a password prompt, for example t
 To try the plugin without installing it, load it for a single session:
 
 ```
-claude --plugin-dir /path/to/repo/plugins/dispatcher
+claude --plugin-dir /path/to/repo
 ```
 
 ## Requirements
 
 - `python3` 3.9 or newer on `PATH`. The plugin's hooks run on it.
 - Access to the Opus and Sonnet models. The architect and reviewers run on Opus, the other agents on Sonnet.
-- The `playwright@claude-plugins-official` plugin, which is installed automatically as a dependency. The manual tester uses it for browser checks.
+- Recommended: the Playwright plugin, which the manual tester uses for browser checks. Without it the tester falls back to the CLI and API. Install it with `claude plugin install playwright@claude-plugins-official`.
 
 ## In each project
 
@@ -60,25 +60,26 @@ Run state and reports are stored in `<project>/.claude/personal/`. Add this fold
 
 ## Updating
 
-The maintainer edits the files, bumps `version` in `plugins/dispatcher/.claude-plugin/plugin.json` and pushes. Everyone else refreshes the catalog, then updates the installed plugin and restarts Claude Code:
+The maintainer edits the files, bumps `version` in `.claude-plugin/plugin.json` and pushes. Everyone else refreshes the catalog, then updates the installed plugin and restarts Claude Code:
 
 ```
-claude plugin marketplace update team-plugins
-claude plugin update dispatcher@team-plugins
+claude plugin marketplace update dispatcher
+claude plugin update dispatcher@dispatcher
 ```
 
 Auto-update is off by default for private marketplaces.
 
 ## Layout
 
+The repository root is the plugin. Claude Code only installs plugins from a marketplace, so `marketplace.json` is a one-entry marketplace that points at the root.
+
 ```
-.claude-plugin/marketplace.json      marketplace catalog (team-plugins)
-plugins/dispatcher/
-  .claude-plugin/plugin.json         plugin manifest
-  skills/                            develop, dev-status, dev-resume, dev-cancel, dev-settings
-  agents/                            the seven specialist agents
-  hooks/hooks.json                   plugin hooks
-  scripts/                           Python scripts used by the hooks
+.claude-plugin/plugin.json           plugin manifest
+.claude-plugin/marketplace.json      one-entry marketplace (dispatcher)
+skills/                              develop, dev-status, dev-resume, dev-cancel, dev-settings
+agents/                              the seven specialist agents
+hooks/hooks.json                     plugin hooks
+scripts/                             Python scripts used by the hooks
 ```
 
 Hooks:

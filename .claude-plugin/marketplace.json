@@ -1,14 +1,13 @@
 {
-  "name": "team-plugins",
+  "name": "dispatcher",
   "owner": {
     "name": "dispatcher maintainers"
   },
-  "description": "Internal Claude Code plugins for the team.",
-  "allowCrossMarketplaceDependenciesOn": ["claude-plugins-official"],
+  "description": "Marketplace entry for the dispatcher Claude Code plugin.",
   "plugins": [
     {
       "name": "dispatcher",
-      "source": "./plugins/dispatcher",
+      "source": "./",
       "description": "Guided multi-agent development workflow (/develop and helper commands)."
     }
   ]

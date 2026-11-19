@@ -59,7 +59,7 @@ Return new findings, changed assumptions, relevant file/symbol pointers, and ver
 
 ## Request external research
 
-For `/dispatch`, when a concrete external fact is missing and blocks your task, return NEEDS_INPUT with `REASON: RESEARCH_REQUIRED` and the RESEARCH_REQUEST below. The orchestrator routes it to the optional Sonnet researcher and resumes you with the answer. Do not delegate yourself, request generic best-practice research, or ask the user to look up a fact that scoped research can resolve. Keep product choices and approvals distinct from factual questions. Assess returned evidence against the supplied versions and task; repeat a search only for a specific gap or contradiction. Research evidence does not replace implementation tests or authorize scope expansion.
+For `/dispatch`, when a concrete external fact is missing and blocks your task, return NEEDS_INPUT with `REASON: RESEARCH_REQUIRED` and the RESEARCH_REQUEST below. The orchestrator routes it to the optional researcher and resumes you with the answer. Do not delegate yourself, request generic best-practice research, or ask the user to look up a fact that scoped research can resolve. Keep product choices and approvals distinct from factual questions. Assess returned evidence against the supplied versions and task; repeat a search only for a specific gap or contradiction. Research evidence does not replace implementation tests or authorize scope expansion.
 
 ## Review evidence and disputed findings
 

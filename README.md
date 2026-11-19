@@ -46,7 +46,7 @@ claude --plugin-dir /path/to/repo
 ## Requirements
 
 - `python3` 3.9 or newer on `PATH`. The plugin's hooks run on it.
-- Access to the Opus and Sonnet models. By default the architect and reviewers run on Opus and the other agents on Sonnet; see Settings to change this.
+- Access to the Opus, Sonnet and Haiku models. By default the architect runs on Opus, the developer and all reviewers on Sonnet, and the manual tester and researcher on Haiku; see Settings to change this.
 - Recommended: the Playwright plugin, which the manual tester uses for browser checks. Without it the tester falls back to the CLI and API. Install it with `claude plugin install playwright@claude-plugins-official`.
 
 ## Settings
@@ -83,7 +83,7 @@ The `## Agent models` section of either file sets the model and the reasoning ef
 - `model`: an alias (`sonnet`, `opus`, `haiku`, `fable`), which always means the latest version, or a full model ID such as `claude-opus-5-1` to pin a version.
 - `effort`: `low`, `medium`, `high`, `xhigh` or `max`.
 
-Each field is resolved on its own: the project file first, then the global file, then the default. The default model is the agent's own (`opus` for the architect and reviewers, `sonnet` for the others) in its latest version; the default effort is whatever Claude Code picks for that agent. A running agent keeps its model and effort; a change applies the next time that agent is started fresh.
+Each field is resolved on its own: the project file first, then the global file, then the default. The default model is the agent's own (`opus` for the architect; `sonnet` for the developer and the code, security and database reviewers; `haiku` for the manual tester and researcher) in its latest version; the default effort is whatever Claude Code picks for that agent. A running agent keeps its model and effort; a change applies the next time that agent is started fresh.
 
 The model is applied by the plugin's `agent.spawn` hook (`hooks/agent-models.ts`), because the Agent tool itself only accepts aliases. `/dispatch` passes the effort when it starts each agent. Setting effort needs Claude Code 2.1.292 or newer.
 

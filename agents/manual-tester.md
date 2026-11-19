@@ -2,7 +2,7 @@
 name: manual-tester
 description: Performs black-box acceptance testing through the real application interface after developer verification.
 tools: Read, Bash, AskUserQuestion, Skill, mcp__plugin_playwright_playwright__*, Write
-model: sonnet
+model: haiku
 maxTurns: 50
 ---
 

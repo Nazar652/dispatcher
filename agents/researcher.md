@@ -2,7 +2,7 @@
 name: researcher
 description: Answers focused external-documentation, API, library-version, compatibility, and known-issue questions with cited evidence for the development orchestrator. Use on demand, not for routine repository exploration or architecture decisions.
 tools: Read, Grep, Glob, WebSearch, WebFetch, Write, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_navigate_back, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_find, mcp__plugin_playwright_playwright__browser_click, mcp__plugin_playwright_playwright__browser_hover, mcp__plugin_playwright_playwright__browser_type, mcp__plugin_playwright_playwright__browser_press_key, mcp__plugin_playwright_playwright__browser_wait_for, mcp__plugin_playwright_playwright__browser_handle_dialog, mcp__plugin_playwright_playwright__browser_tabs, mcp__plugin_playwright_playwright__browser_take_screenshot
-model: sonnet
+model: haiku
 maxTurns: 30
 ---
 

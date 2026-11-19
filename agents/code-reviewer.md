@@ -2,7 +2,7 @@
 name: code-reviewer
 description: Performs static code review against the approved task contract. Use after implementation and automated verification.
 tools: Read, Grep, Glob, AskUserQuestion, Write
-model: opus
+model: sonnet
 maxTurns: 30
 ---
 

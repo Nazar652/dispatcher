@@ -1,6 +1,6 @@
 ---
-name: dev-status
-description: Reports the persisted status of a /develop multi-agent development run without modifying state or starting agents.
+name: dispatch-status
+description: Reports the persisted status of a /dispatch multi-agent development run without modifying state or starting agents.
 argument-hint: "[task-id]"
 disable-model-invocation: true
 allowed-tools: Read Glob Grep
@@ -30,28 +30,28 @@ Resolve `<project-root>` from the current project context before accessing workf
 
 All `.claude/...` paths in this skill are relative to `<project-root>`, never to the current subdirectory or the global user-level `~/.claude` directory.
 
-The only workflow-state location is `<project-root>/.claude/personal/runs/`. Do not create or use a top-level workflow-state directory in the repository root. Pass the resolved absolute run path to delegated specialists when applicable.
+The only workflow-state location is `<project-root>/.claude/personal/.dispatcher/runs/`. Do not create or use a top-level workflow-state directory in the repository root. Pass the resolved absolute run path to delegated specialists when applicable.
 
 ## Select the run
 
 The run root is:
 
-`.claude/personal/runs/`
+`.claude/personal/.dispatcher/runs/`
 
 When a task ID is supplied:
 
-1. Read `.claude/personal/runs/<task-id>/state.md`.
+1. Read `.claude/personal/.dispatcher/runs/<task-id>/state.md`.
 2. Report `RUN_NOT_FOUND` if it does not exist.
 3. Do not silently select another run.
 
 When no task ID is supplied:
 
-1. Find `.claude/personal/runs/*/state.md`.
+1. Find `.claude/personal/.dispatcher/runs/*/state.md`.
 2. If none exist, report `NO_RUNS_FOUND`.
 3. Prefer the single non-terminal run when exactly one exists.
 4. When multiple candidate runs exist, inspect their task IDs and persisted statuses.
 5. A task ID ending in `YYYYMMDD-HHMMSS` may be ordered by that timestamp.
-6. If the intended run remains ambiguous, list the candidates and ask the user to invoke `/dev-status <task-id>`.
+6. If the intended run remains ambiguous, list the candidates and ask the user to invoke `/dispatch-status <task-id>`.
 7. Do not guess between ambiguous active runs.
 
 Terminal statuses include:
@@ -144,8 +144,8 @@ NEXT SAFE ACTION
 - Describe the next action implied by the persisted phase.
 - Do not perform that action.
 - When another command is appropriate, name it:
-  - `/dev-resume <task-id>`;
-  - `/dev-cancel <task-id>`;
+  - `/dispatch-resume <task-id>`;
+  - `/dispatch-cancel <task-id>`;
   - answer pending questions;
   - approve or revise the plan.
 

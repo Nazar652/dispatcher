@@ -1,24 +1,24 @@
 ---
-name: dev-settings
-description: Creates, displays, and updates project-specific instructions used exclusively by the /develop multi-agent workflow.
+name: dispatch-settings
+description: Creates, displays, and updates project-level settings for the /dispatch multi-agent workflow, including per-agent models. Project settings always override the machine-wide settings managed by /dispatch-global-settings.
 argument-hint: "[show|set|remove|replace|clear] [project instructions]"
 disable-model-invocation: true
-allowed-tools: Read Glob Grep Bash(git rev-parse --show-toplevel) Bash(git -C * check-ignore -- .claude/personal/project.md)
+allowed-tools: Read Glob Grep Bash(git rev-parse --show-toplevel) Bash(git -C * check-ignore -- .claude/personal/.dispatcher/settings.md)
 ---
 
 # Project development workflow settings
 
-Manage project-specific instructions for `/develop`.
+Manage project-specific instructions for `/dispatch`.
 
 Invocation:
 
-`/dev-settings $ARGUMENTS`
+`/dispatch-settings $ARGUMENTS`
 
 Store settings only in:
 
-`<project-root>/.claude/personal/project.md`
+`<project-root>/.claude/personal/.dispatcher/settings.md`
 
-Never create `.claude/personal/project.local.md`.
+Machine-wide settings live in `~/.claude/personal/.dispatcher/settings.md` and are managed only by `/dispatch-global-settings`. Never modify that file from this skill. On any topic covered by both files, project settings always win.
 
 Do not modify a project or global `CLAUDE.md`. This keeps these instructions scoped to the multi-agent development workflow.
 
@@ -26,17 +26,19 @@ Do not modify a project or global `CLAUDE.md`. This keeps these instructions sco
 
 Examples:
 
-`/dev-settings show`
+`/dispatch-settings show`
 
-`/dev-settings In this project the backend runs with docker compose and the frontend with npm run dev.`
+`/dispatch-settings In this project the backend runs with docker compose and the frontend with npm run dev.`
 
-`/dev-settings set Do not run tests or linters without separate permission.`
+`/dispatch-settings set Do not run tests or linters without separate permission.`
 
-`/dev-settings remove the rule about running pytest`
+`/dispatch-settings set use opus for the developer agent`
 
-`/dev-settings replace Use only the instructions below: ...`
+`/dispatch-settings remove the rule about running pytest`
 
-`/dev-settings clear`
+`/dispatch-settings replace Use only the instructions below: ...`
+
+`/dispatch-settings clear`
 
 If the first argument is not a recognized operation, treat all arguments as a `set` operation.
 
@@ -56,7 +58,7 @@ If the command succeeds, use its canonical result as `<project-root>`.
 
 If the current directory is not inside a Git repository:
 
-1. Look for a unique nearest ancestor containing `.claude/personal/project.md`.
+1. Look for a unique nearest ancestor containing `.claude/personal/.dispatcher/settings.md`.
 2. If found, show the resolved root and use it.
 3. Otherwise propose the current working directory and ask the human to confirm it as the project root.
 
@@ -68,7 +70,7 @@ Resolve and display the absolute target path before writing.
 
 For a Git repository, check whether the target is ignored:
 
-`git -C "<project-root>" check-ignore -- .claude/personal/project.md`
+`git -C "<project-root>" check-ignore -- .claude/personal/.dispatcher/settings.md`
 
 If the target is ignored, continue.
 
@@ -83,9 +85,9 @@ The human may intentionally commit the file in another project, but this must be
 
 ## File creation
 
-If `.claude/personal/` does not exist, create only that exact directory under the confirmed project root.
+If `.claude/personal/.dispatcher/` does not exist, create only that exact directory under the confirmed project root.
 
-Create `project.md` with these headings:
+Create `settings.md` with these headings:
 
 - `# Project development workflow`
 - `## Project facts`
@@ -94,13 +96,14 @@ Create `project.md` with these headings:
 - `## Manual testing`
 - `## Constraints and prohibited actions`
 - `## Environment`
+- `## Agent models`
 - `## Additional notes`
 
 Include this introductory text:
 
-`Managed through /dev-settings.`
+`Managed through /dispatch-settings.`
 
-`These instructions apply only to /develop.`
+`These instructions apply only to /dispatch.`
 
 Populate only sections supported by human-provided information.
 
@@ -108,14 +111,23 @@ Do not invent commands, paths, ports, dependencies, services, credentials, or ar
 
 Use `Write` or `Edit` for the exact settings file. These tools are intentionally not pre-approved in frontmatter; normal session permission rules apply.
 
+## Agent models
+
+The `## Agent models` section holds one line per specialist role, for example:
+
+- `- developer: opus`
+- `- researcher: haiku`
+
+Valid roles: `architect`, `developer`, `manual-tester`, `code-reviewer`, `security-reviewer`, `database-reviewer`, `researcher`. Valid models: `sonnet`, `opus`, `haiku`, `fable`. Translate requests such as "use opus for the developer" into this form. Refuse any other role or model, including full model IDs, and list the valid values. A role without a line uses the global setting, then the agent's built-in default.
+
 ## Show operation
 
 For `show`:
 
 1. Resolve the project root.
-2. Read `project.md` if it exists.
-3. Display its current contents.
-4. Report `NO_PROJECT_SETTINGS` if it does not exist.
+2. Read the project `settings.md` if it exists and display its contents, or report `NO_PROJECT_SETTINGS`.
+3. Read `~/.claude/personal/.dispatcher/settings.md` if it exists and list which of its settings this project overrides, or report `NO_GLOBAL_SETTINGS`.
+4. Show the effective model per agent role and where it comes from (`project`, `global`, or `agent default`).
 5. Do not create or modify files.
 
 ## Set operation
@@ -172,7 +184,7 @@ Before clearing:
 
 ## Secret handling
 
-Never store secret values in `project.md`, even when `.claude/` is ignored by Git.
+Never store secret values in `settings.md`, even when `.claude/` is ignored by Git.
 
 Do not store:
 
@@ -219,37 +231,40 @@ Appropriate settings include:
 - cleanup procedures
 - platform-specific instructions
 
-Record commands as instructions only. Do not execute setup, Docker, builds, tests, linters, migrations, browsers, or cleanup commands while running `/dev-settings`.
+Record commands as instructions only. Do not execute setup, Docker, builds, tests, linters, migrations, browsers, or cleanup commands while running `/dispatch-settings`.
 
 Do not invoke agents.
 
-## Existing local override
+## Legacy files
 
-If `.claude/personal/project.local.md` already exists, do not modify it.
+Earlier versions of this workflow stored project settings in `.claude/personal/project.md` (optionally overridden by `.claude/personal/project.local.md`) and run state in `.claude/personal/runs/`. `/dispatch` no longer reads them.
 
-Warn that the existing `/develop` precedence rules may allow that file to override `project.md`.
+If any of these exist under the project root:
 
-Recommend consolidating its non-secret contents into `project.md` and removing it manually when the human wants a single configuration source.
+1. Tell the human which ones were found.
+2. Offer to copy them: merge the non-secret contents of `project.md` and then `project.local.md` (the local file wins on conflicts) into `.claude/personal/.dispatcher/settings.md`, and copy `runs/` to `.claude/personal/.dispatcher/runs/`.
+3. Show the conflicts and the target paths, and act only after explicit confirmation.
+4. After a confirmed copy, leave the old files in place and tell the human they can delete them; never delete them yourself.
 
 ## Effect on workflow runs
 
 A project instruction may explicitly skip individual tests, linters, formatters, type checkers, or all automated checks.
 
-Future `/develop` runs must record each such omission as `SKIPPED_BY_PROJECT_POLICY`, including its policy source and residual risk. A skipped check is never reported as `PASS`.
+Future `/dispatch` runs must record each such omission as `SKIPPED_BY_PROJECT_POLICY`, including its policy source and residual risk. A skipped check is never reported as `PASS`.
 
-Updated settings automatically apply to future `/develop` runs.
+Updated settings automatically apply to future `/dispatch` runs.
 
-All run paths below are relative to the resolved `<project-root>`. Workflow state belongs only in `<project-root>/.claude/personal/runs/`, never at the repository top level or in the global user-level `~/.claude` directory.
+All run paths below are relative to the resolved `<project-root>`. Workflow state belongs only in `<project-root>/.claude/personal/.dispatcher/runs/`, never at the repository top level or in the global user-level `~/.claude` directory.
 
 An existing run may already contain a frozen copy at:
 
-`.claude/personal/runs/<task-id>/project-context.md`
+`.claude/personal/.dispatcher/runs/<task-id>/project-context.md`
 
 Do not silently rewrite active-run state.
 
 To apply new settings to an existing paused run, tell the human to use:
 
-`/dev-resume <task-id> apply the updated project settings`
+`/dispatch-resume <task-id> apply the updated project settings`
 
 The resume orchestrator must record the change, refresh the resolved project context, and invalidate any affected gates.
 
@@ -257,7 +272,9 @@ The resume orchestrator must record the change, refresh the resolved project con
 
 Modify only:
 
-`<confirmed-project-root>/.claude/personal/project.md`
+`<confirmed-project-root>/.claude/personal/.dispatcher/settings.md`
+
+and, only after explicit confirmation under Legacy files, create `<confirmed-project-root>/.claude/personal/.dispatcher/runs/` contents copied from the legacy run directory.
 
 Do not modify:
 
@@ -267,6 +284,7 @@ Do not modify:
 - lockfiles
 - Git configuration
 - `.gitignore`
+- the global settings file `~/.claude/personal/.dispatcher/settings.md`
 - global skills
 - agent definitions
 - workflow run state

@@ -1,5 +1,5 @@
 ---
-name: develop
+name: dispatch
 description: Runs a guided multi-agent software-development workflow through architect, developer, manual-tester, code-reviewer, and conditionally required security-reviewer and database-reviewer subagents.
 argument-hint: "<task description>"
 disable-model-invocation: true
@@ -13,19 +13,19 @@ $ARGUMENTS
 
 ## Session-scoped role restoration
 
-The dispatcher plugin ships a SessionStart hook that runs on every compaction/resume, but it stays silent unless the session holds an active /develop registration, which only an actual /develop invocation creates. Reading this file as policy data does not activate it. This is a role reminder after compaction/resume, not a context-size limit or a tool-permission guard.
+The dispatcher plugin ships a SessionStart hook that runs on every compaction/resume, but it stays silent unless the session holds an active /dispatch registration, which only an actual /dispatch invocation creates. Reading this file as policy data does not activate it. This is a role reminder after compaction/resume, not a context-size limit or a tool-permission guard.
 
 The current invocation's runtime session ID is `${CLAUDE_SESSION_ID}`. After resolving the project root and creating the run's initial state, and before the first specialist delegation, use native Write to create `<run>/orchestrator-session.json` with exactly this small registration (substitute the actual runtime ID):
 
 ```json
-{"version": 1, "workflow": "develop", "session_id": "${CLAUDE_SESSION_ID}", "active": true}
+{"version": 1, "workflow": "dispatch", "session_id": "${CLAUDE_SESSION_ID}", "active": true}
 ```
 
 Record this marker path and session ID in state.md. Keep a plain `STATUS: <current status>` header near the start of state.md, synchronized with the current snapshot. Never infer the session ID from a task ID, another chat, a transcript filename, or mere existence of an active run. If the runtime leaves the session placeholder unexpanded or does not support plugin hooks, report that automatic restoration is unavailable; do not invent a registration or broaden it to other sessions.
 
-The hook emits nothing unless an active /develop registration matches the exact incoming session ID; it ignores subagents, other sessions, and DONE/CANCELLED runs. On restoration, first recover the phase, approvals, existing agents and pending work from the named state; then continue orchestration. A missing or ambiguous checkpoint requires targeted recovery, never implementation by the main session.
+The hook emits nothing unless an active /dispatch registration matches the exact incoming session ID; it ignores subagents, other sessions, and DONE/CANCELLED runs. On restoration, first recover the phase, approvals, existing agents and pending work from the named state; then continue orchestration. A missing or ambiguous checkpoint requires targeted recovery, never implementation by the main session.
 
-Preserve the registration while this run is paused, awaiting input, blocked, or resumed in the same session. Set its `active` field to false with native Edit when the run reaches DONE/CANCELLED or the user explicitly leaves /develop for another workflow/task; preserve the file as history. Never deactivate another session's registration. A fresh session, /clear, or fork is not automatically registered, and reading this policy from /dev-resume must not activate the hook. Existing sessions that invoked an older skill version are not retroactively registered.
+Preserve the registration while this run is paused, awaiting input, blocked, or resumed in the same session. Set its `active` field to false with native Edit when the run reaches DONE/CANCELLED or the user explicitly leaves /dispatch for another workflow/task; preserve the file as history. Never deactivate another session's registration. A fresh session, /clear, or fork is not automatically registered, and reading this policy from /dispatch-resume must not activate the hook. Existing sessions that invoked an older skill version are not retroactively registered.
 
 ## Main-session orchestrator
 
@@ -55,7 +55,7 @@ Delegate directly from the main conversation to:
 - `security-reviewer` when classified `REQUIRED`;
 - `database-reviewer` when classified `REQUIRED`.
 
-These specialists ship with the dispatcher plugin. Always dispatch them by their plugin-scoped agent type, `dispatcher:<role>` (for example `dispatcher:architect`), never the bare role name, which may resolve to an unrelated user or project agent. Elsewhere this workflow refers to them by role name only.
+These specialists ship with the dispatcher plugin. Always dispatch them by their plugin-scoped agent type, `dispatcher:<role>` (for example `dispatcher:architect`), never the bare role name, which may resolve to an unrelated user or project agent. Pass the model resolved under Workflow settings > Agent models. Elsewhere this workflow refers to them by role name only.
 
 Never ask a subagent to delegate work to another subagent.
 
@@ -64,7 +64,7 @@ Never ask a subagent to delegate work to another subagent.
 Apply this protocol to every delegation, including architecture, on-demand research, implementation, testing, reviews, corrections, and repair cycles.
 
 1. Before launching a specialist, check recorded agent IDs and available session/task state. Resume an existing suitable agent with context for this project/worktree and role whenever available and within the Per-agent context budget, including a completed agent. Completion, a new step, and a repair cycle are not reasons to create a new instance. Never reuse the developer as an independent tester or reviewer.
-2. If that agent is still running, send the needed correction through the supported mechanism or wait for its result; do not create a duplicate. If continuity is unavailable or live state is uncertain, follow the dev-resume continuity/replacement protocol. Do not claim a fresh instance has the old conversation. Create a new agent only when no suitable reusable instance exists and no replacement-approval requirement prevents it, or through the authorized Per-agent context budget replacement protocol.
+2. If that agent is still running, send the needed correction through the supported mechanism or wait for its result; do not create a duplicate. If continuity is unavailable or live state is uncertain, follow the dispatch-resume continuity/replacement protocol. Do not claim a fresh instance has the old conversation. Create a new agent only when no suitable reusable instance exists and no replacement-approval requirement prevents it, or through the authorized Per-agent context budget replacement protocol.
 3. Give the specialist the essential already-established facts for its immediate task: objective/criteria, approved constraints and decisions, relevant paths/symbols/interfaces, current checkpoint, blockers, and what changed. Mark facts, assumptions, and unknowns distinctly. For a reused instance, send only the new assignment and delta since its last result; do not repeat its unchanged background, policy, or reports. Do not gather broad new context merely to fill a handoff.
 4. Keep decision-critical facts inline. Point to large plans, policy sections, prior reports, code, diffs, and logs by exact absolute paths and useful section/finding IDs; the recipient reads only what its task requires. Do not load or copy entire evidence into the orchestrator merely to relay it. Forward relevant facts already learned by other specialists without requiring redundant revalidation. Exclude secrets and unrelated material; preserve the manual tester's prohibition on inspecting implementation code.
 5. Explicitly instruct the receiving agent: accept supplied facts and recorded decisions without redundant double-checking; start the assigned work from this context and your existing conversation. Do not survey the whole repository or re-read background files. Inspect only the current edit/review target and dependencies necessary for the task. Expand a search only to answer a concrete missing question, using a scoped lookup rather than broad exploration. Issue independent Read/Grep/Glob calls together in one message so they run in parallel, read each needed range once, and do not reopen code already shown in the review package's function-context diffs.
@@ -126,12 +126,12 @@ This protocol applies to every specialist, including resumed agents. Include its
 
 ## Coding policy
 
-This section is the single source of coding rules for `/develop`. Do not load, invoke, or apply `dev-conventions` during this workflow. If it is already in conversation context, its coding rules and cadence do not supplement this workflow; use this policy and this workflow's approval and verification rules.
+This section is the single source of coding rules for `/dispatch`. Do not load, invoke, or apply `dev-conventions` during this workflow. If it is already in conversation context, its coding rules and cadence do not supplement this workflow; use this policy and this workflow's approval and verification rules.
 
 ### Policy delivery and ownership
 
-- Before architecture delegation, resolve this policy against explicit user instructions, applicable repository instructions, and project workflow settings. Use this policy as the coding default; current explicit user instructions take precedence, and repository-specific architecture/tooling rules take precedence over these general defaults. Resolve material conflicts through the active workflow's clarification rules.
-- Include the resolved policy, source (`develop/SKILL.md`, Coding policy), and any explicit overrides in `task-contract.md`. Give the architect, developer, code-reviewer, and required specialist reviewers critical rules/overrides inline and the exact persisted policy section to read when first needed; reused agents receive policy changes only. Do not copy the entire unchanged policy into every handoff. Persist it with the contract before implementation, even when there is no `project-context.md`.
+- Before architecture delegation, resolve this policy against explicit user instructions, applicable repository instructions, and the resolved workflow settings (global and project). Use this policy as the coding default; current explicit user instructions take precedence, and repository-specific architecture/tooling rules take precedence over these general defaults. Resolve material conflicts through the active workflow's clarification rules.
+- Include the resolved policy, source (`dispatch/SKILL.md`, Coding policy), and any explicit overrides in `task-contract.md`. Give the architect, developer, code-reviewer, and required specialist reviewers critical rules/overrides inline and the exact persisted policy section to read when first needed; reused agents receive policy changes only. Do not copy the entire unchanged policy into every handoff. Persist it with the contract before implementation, even when there is no `project-context.md`.
 - The architect incorporates these rules into the plan and verification contract. The developer implements them. The code-reviewer checks applicable rules, and the database-reviewer checks migration rules. The manual tester receives only acceptance and environment information appropriate to its black-box role.
 - Reused agents must use the current contract's policy in place of earlier conventions. On resume, reuse the persisted policy and send only changes; do not reload `dev-conventions`. For an older run without a coding policy, resolve and attach this policy before further implementation/review, recording any scope or verification change under the workflow's existing approval rules.
 
@@ -216,45 +216,53 @@ This section is the single source of coding rules for `/develop`. Do not load, i
 
 Resolve `<project-root>` from the current project context before accessing workflow files. When invoked from a subdirectory, use native `Read` and `Glob` inspection of ancestor directories to find the nearest Git repository or worktree root (`.git` may be a directory or a file). For a non-Git project, use the explicitly established project root; ask if it is ambiguous.
 
-All `.claude/...` paths in this skill are relative to `<project-root>`, never to the current subdirectory or the global user-level `~/.claude` directory.
+All `.claude/...` paths in this skill are relative to `<project-root>`, never to the current subdirectory or the global user-level `~/.claude` directory. The only exception is the global settings file, which this skill always names by its full path `~/.claude/personal/.dispatcher/settings.md`.
 
-The only workflow-state location is `<project-root>/.claude/personal/runs/`. Do not create or use a top-level workflow-state directory in the repository root. Pass the resolved absolute run path to delegated specialists when applicable.
+The only workflow-state location is `<project-root>/.claude/personal/.dispatcher/runs/`. Do not create or use a top-level workflow-state directory in the repository root. Pass the resolved absolute run path to delegated specialists when applicable.
 
-## Optional project workflow
+## Workflow settings
 
-Look for these files in the current project:
+Settings come from two optional files, both managed by the user:
 
-- `.claude/personal/project.md`;
-- `.claude/personal/project.local.md`.
+- global settings for every project on this machine: `~/.claude/personal/.dispatcher/settings.md`, managed through `/dispatch-global-settings`;
+- project settings: `<project-root>/.claude/personal/.dispatcher/settings.md`, managed through `/dispatch-settings`.
 
-If neither file exists, continue with the global workflow defaults.
+If neither file exists, continue with the workflow defaults.
 
-If they exist:
+If either exists:
 
-1. Read `project.md`.
-2. Apply `project.local.md` as a local override.
-3. Resolve conflicts using this precedence:
+1. Read the global file, then the project file.
+2. Resolve conflicts using this precedence, highest first:
    - current explicit user instruction;
-   - `project.local.md`;
-   - `project.md`;
-   - global workflow defaults.
-4. Ask the user about unresolved material conflicts.
-5. Save the resolved instructions in the run directory as `project-context.md`.
-6. Pass the relevant resolved instructions to every delegated specialist.
+   - project settings;
+   - global settings;
+   - workflow defaults.
+   Project settings always override global settings on the same topic, including agent models. Apply this silently, but name each overridden global setting in the resolved context so the user can see it.
+3. Ask the user only about material conflicts inside a single file or with the current instruction.
+4. Save the resolved instructions in the run directory as `project-context.md`, marking the source (`project`, `global`) of each instruction.
+5. Pass the relevant resolved instructions to every delegated specialist.
 
-Do not read secrets from project workflow files. They may name required environment variables but must not contain credential values.
+Do not read secrets from workflow settings files. They may name required environment variables but must not contain credential values.
+
+Legacy locations: if `<project-root>/.claude/personal/project.md`, `<project-root>/.claude/personal/project.local.md`, or `<project-root>/.claude/personal/runs/` exists, do not read or use them as settings or run state. Tell the user they were found and that `/dispatch-settings` can copy them to `.claude/personal/.dispatcher/`.
+
+### Agent models
+
+Both settings files may contain an `## Agent models` section with one line per role, for example `- developer: opus`. Valid values are the model aliases `sonnet`, `opus`, `haiku`, and `fable`; ignore and report any other value.
+
+For every specialist dispatch or fresh replacement, resolve the role's model in this order: current explicit user instruction, project settings, global settings. When one is found, pass it as the Agent tool's `model` parameter; otherwise omit the parameter so the agent's own default applies. Record the resolved model and its source per role in state.md. A resumed or continued agent keeps the model it was started with; a changed setting applies only when that role is next created fresh.
 
 ## Durable run state
 
 Before the first specialist delegation, create (mark the unfinished contract DRAFT):
 
-- `.claude/personal/runs/<task-id>/state.md`;
-- `.claude/personal/runs/<task-id>/task-contract.md`;
-- `.claude/personal/runs/<task-id>/decision-log.md`.
+- `.claude/personal/.dispatcher/runs/<task-id>/state.md`;
+- `.claude/personal/.dispatcher/runs/<task-id>/task-contract.md`;
+- `.claude/personal/.dispatcher/runs/<task-id>/decision-log.md`.
 
-When project workflow files exist, also create:
+When any workflow settings file exists, also create:
 
-- `.claude/personal/runs/<task-id>/project-context.md`.
+- `.claude/personal/.dispatcher/runs/<task-id>/project-context.md`.
 
 Maintain current summaries and pointers for these state fields under Reports and current state; keep historical/detail evidence outside the snapshot:
 
@@ -281,7 +289,7 @@ Maintain current summaries and pointers for these state fields under Reports and
 
 Write a checkpoint immediately before every delegation and immediately after every agent result.
 
-Use `Read`, `Write`, `Edit`, and `Glob` for all `.claude/personal` artifact management. Do not use Bash, PowerShell, shell redirection, heredocs, `sed`, or `cat` to create or update workflow-state files. Shell commands may be used only for necessary read-only diagnostics such as `git status` or version inspection, never to mutate orchestration state.
+Use `Read`, `Write`, `Edit`, and `Glob` for all `.claude/personal/.dispatcher` artifact management. Do not use Bash, PowerShell, shell redirection, heredocs, `sed`, or `cat` to create or update workflow-state files. Shell commands may be used only for necessary read-only diagnostics such as `git status` or version inspection, never to mutate orchestration state.
 
 ## Human comprehension aids
 

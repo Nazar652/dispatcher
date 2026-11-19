@@ -1,5 +1,5 @@
 ---
-name: dev-resume
+name: dispatch-resume
 description: Resumes a paused, blocked, or interrupted multi-agent development run from its durable checkpoint while preserving agent continuity when the original Claude Code session is available.
 argument-hint: "<task-id> [correction or instruction]"
 disable-model-invocation: true
@@ -11,7 +11,7 @@ Resume an existing multi-agent development workflow.
 
 Invocation:
 
-`/dev-resume $ARGUMENTS`
+`/dispatch-resume $ARGUMENTS`
 
 The first argument is the task ID. Everything after it is an optional human correction, clarification, or instruction.
 
@@ -27,15 +27,15 @@ Resolve `<project-root>` from the current project context before accessing workf
 
 All `.claude/...` paths in this skill are relative to `<project-root>`, never to the current subdirectory or the global user-level `~/.claude` directory.
 
-The only workflow-state location is `<project-root>/.claude/personal/runs/`. Do not create or use a top-level workflow-state directory in the repository root. Pass the resolved absolute run path to delegated specialists when applicable.
+The only workflow-state location is `<project-root>/.claude/personal/.dispatcher/runs/`. Do not create or use a top-level workflow-state directory in the repository root. Pass the resolved absolute run path to delegated specialists when applicable.
 
 ## Locate the run
 
 Locate:
 
-`.claude/personal/runs/<task-id>/`
+`.claude/personal/.dispatcher/runs/<task-id>/`
 
-Read state.md first. Apply the Agent continuity and focused handoffs and Reports and current state sections of sibling ../develop/SKILL.md as shared rules, without invoking GUIDED mode. When creating a specialist, dispatch it by its plugin-scoped agent type `dispatcher:<role>` (for example `dispatcher:architect`), never the bare role name. Then read only:
+Read state.md first. Apply the Agent continuity and focused handoffs and Reports and current state sections of sibling ../dispatch/SKILL.md as shared rules, without invoking GUIDED mode. When creating a specialist, dispatch it by its plugin-scoped agent type `dispatcher:<role>` (for example `dispatcher:architect`), never the bare role name, and with the model resolved under the Workflow settings > Agent models section of ../dispatch/SKILL.md, re-reading both settings files when creating it. Then read only:
 
 - current task-contract.md sections needed for the persisted phase, including approval and relevant policy;
 - applicable project-context.md sections when needed;
@@ -48,7 +48,7 @@ Use native `Read`, `Glob`, and `Grep` operations for inspection.
 
 If the task ID is missing, ask the human for it.
 
-If the run directory does not exist, report `RUN_NOT_FOUND`. Do not create a new run and do not silently invoke `/develop`. A run whose state records mode AUTOPILOT comes from the removed `/develop-auto` workflow; resume it under GUIDED rules, including plan approval.
+If the run directory does not exist, report `RUN_NOT_FOUND`. Do not create a new run and do not silently invoke `/dispatch`.
 
 ## Validate durable state
 
@@ -80,7 +80,7 @@ A `BLOCKED` workflow may resume only after the blocker has been resolved or the 
 
 Exact subagent continuation depends on access to the original or resumed parent Claude Code session.
 
-Before selecting an instance, load and apply the Per-agent context budget section of sibling `../develop/SKILL.md` as data. When a stored agent ID can be resumed and remains eligible under that protocol, resume that exact agent. Do not resume a context-retired instance; select its recorded successor or complete the pending handoff.
+Before selecting an instance, load and apply the Per-agent context budget section of sibling `../dispatch/SKILL.md` as data. When a stored agent ID can be resumed and remains eligible under that protocol, resume that exact agent. Do not resume a context-retired instance; select its recorded successor or complete the pending handoff.
 
 A persisted agent ID alone does not prove that the agent is currently running. Check the available native task or agent state when possible. If live state cannot be established, tell the human to inspect `/tasks`. Do not start a duplicate specialist.
 
@@ -120,13 +120,13 @@ For a legacy run whose finalized task contract does not explicitly classify both
 
 ## Review-evidence compatibility
 
-Load the current shared Coding policy from `../develop/SKILL.md` as data, including Requirements-to-plan check, Complete review package, and Evidence-based finding resolution; keep GUIDED approval rules. Preserve explicit recorded overrides and supply relevant policy changes to the reused agents. If an older contract lacks requirement coverage, resume the same architect to map the existing scope without inventing new work. Before further code review, require a reliable original task baseline and current review package; a current HEAD alone cannot reconstruct earlier dirty changes. Follow the shared protocol for missing evidence rather than inventing it.
+Load the current shared Coding policy from `../dispatch/SKILL.md` as data, including Requirements-to-plan check, Complete review package, and Evidence-based finding resolution; keep GUIDED approval rules. Preserve explicit recorded overrides and supply relevant policy changes to the reused agents. If an older contract lacks requirement coverage, resume the same architect to map the existing scope without inventing new work. Before further code review, require a reliable original task baseline and current review package; a current HEAD alone cannot reconstruct earlier dirty changes. Follow the shared protocol for missing evidence rather than inventing it.
 
 If a finding objection is awaiting a ruling, resume its originating reviewer in the matching review phase before requiring the disputed fix. Preserve IDs, evidence, rulings, and the original baseline across interruptions; the developer cannot mark a dispute resolved. Do not increment repair cycles for an evidence-only exchange.
 
 ## Phase routing
 
-First handle a pending CONTEXT_LIMIT handoff under the shared protocol; preserve the work phase and do not route this maintenance signal to the user as a routine question. All references below to the same or stored specialist mean the eligible instance or its recorded successor. For a pending RESEARCH_REQUIRED request, load the On-demand external research section of sibling `../develop/SKILL.md` as data and route it before generic user clarification. Then resume according to the persisted phase:
+First handle a pending CONTEXT_LIMIT handoff under the shared protocol; preserve the work phase and do not route this maintenance signal to the user as a routine question. All references below to the same or stored specialist mean the eligible instance or its recorded successor. For a pending RESEARCH_REQUIRED request, load the On-demand external research section of sibling `../dispatch/SKILL.md` as data and route it before generic user clarification. Then resume according to the persisted phase:
 
 - `CLARIFICATION` or `NEEDS_INPUT`: present pending questions to the human, persist the answers, then resume the stored specialist.
 - `PLAN_APPROVAL`: present the finalized plan and wait for explicit approval.
@@ -144,7 +144,7 @@ First handle a pending CONTEXT_LIMIT handoff under the shared protocol; preserve
 
 If the appropriate specialist never existed, create it only when the persisted workflow authorizes that phase and no approval gate or blocker prevents it.
 
-Preserve any existing orchestrator-session.json registration and the state STATUS header during updates. Do not create/rebind that registration or activate /develop hooks merely by invoking /dev-resume in another session. Session-scoped restoration applies only to the originally registered /develop session while its hook is available.
+Preserve any existing orchestrator-session.json registration and the state STATUS header during updates. Do not create/rebind that registration or activate /dispatch hooks merely by invoking /dispatch-resume in another session. Session-scoped restoration applies only to the originally registered /dispatch session while its hook is available.
 
 ## Durable resume protocol
 
@@ -162,7 +162,7 @@ After successful delegation:
 3. Update the current snapshot and append a short post-delegation event, without copying full reports or previous snapshots.
 4. Report what resumed and whether it was the exact agent or an approved replacement.
 
-Use native `Read`, `Write`, `Edit`, and `Glob` operations for `.claude/personal` state. Do not use shell heredocs, `sed`, `cat`, or shell redirection to maintain workflow state.
+Use native `Read`, `Write`, `Edit`, and `Glob` operations for `.claude/personal/.dispatcher` state. Do not use shell heredocs, `sed`, `cat`, or shell redirection to maintain workflow state.
 
 Shell commands may be used only for necessary project diagnostics or specialist work, subject to the original task contract and project rules.
 

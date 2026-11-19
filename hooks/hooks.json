@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/restore_develop_orchestrator.py\"",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/restore_dispatch_orchestrator.py\"",
             "timeout": 5
           }
         ]

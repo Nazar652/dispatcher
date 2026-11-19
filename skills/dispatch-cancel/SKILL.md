@@ -1,6 +1,6 @@
 ---
-name: dev-cancel
-description: Permanently cancels a /develop multi-agent development run, stops its exact known background tasks when possible, and preserves durable state and working-tree changes for inspection.
+name: dispatch-cancel
+description: Permanently cancels a /dispatch multi-agent development run, stops its exact known background tasks when possible, and preserves durable state and working-tree changes for inspection.
 argument-hint: "<task-id> [reason]"
 disable-model-invocation: true
 allowed-tools: Read Glob Grep Edit TaskList TaskGet TaskStop
@@ -12,7 +12,7 @@ Permanently cancel an existing multi-agent development workflow.
 
 Invocation:
 
-`/dev-cancel $ARGUMENTS`
+`/dispatch-cancel $ARGUMENTS`
 
 The first argument is the exact task ID. Everything after it is an optional cancellation reason.
 
@@ -22,9 +22,9 @@ Invoking this skill explicitly authorizes cancellation of that run. Do not ask f
 
 Cancellation is a terminal workflow state.
 
-After a run reaches `CANCELLED`, `/dev-resume` must refuse to resume it.
+After a run reaches `CANCELLED`, `/dispatch-resume` must refuse to resume it.
 
-If the human wants a temporary pause, correction, or later continuation, they should interrupt the current operation and use `/dev-resume` instead of `/dev-cancel`.
+If the human wants a temporary pause, correction, or later continuation, they should interrupt the current operation and use `/dispatch-resume` instead of `/dispatch-cancel`.
 
 Do not reinterpret temporary wording such as “pause”, “hold”, or “continue later” as permanent cancellation. Explain the distinction and ask which operation the human intends.
 
@@ -34,13 +34,13 @@ Resolve `<project-root>` from the current project context before accessing workf
 
 All `.claude/...` paths in this skill are relative to `<project-root>`, never to the current subdirectory or the global user-level `~/.claude` directory.
 
-The only workflow-state location is `<project-root>/.claude/personal/runs/`. Do not create or use a top-level workflow-state directory in the repository root. Pass the resolved absolute run path to delegated specialists when applicable.
+The only workflow-state location is `<project-root>/.claude/personal/.dispatcher/runs/`. Do not create or use a top-level workflow-state directory in the repository root. Pass the resolved absolute run path to delegated specialists when applicable.
 
 ## Locate the exact run
 
 Locate:
 
-`.claude/personal/runs/<task-id>/`
+`.claude/personal/.dispatcher/runs/<task-id>/`
 
 Read:
 
@@ -125,13 +125,13 @@ If persisted state says work may still be active but the exact task cannot be fo
 5. Do not claim that cancellation is complete.
 6. Do not continue to another workflow phase.
 
-After the task is manually stopped, the human may invoke `/dev-cancel <task-id>` again to finalize the cancellation.
+After the task is manually stopped, the human may invoke `/dispatch-cancel <task-id>` again to finalize the cancellation.
 
 ## Foreground work
 
 The skill cannot run concurrently with a foreground specialist response.
 
-If foreground work is misbehaving, the human should first interrupt it with `Ctrl+C` or the Desktop stop control, then invoke `/dev-cancel`.
+If foreground work is misbehaving, the human should first interrupt it with `Ctrl+C` or the Desktop stop control, then invoke `/dispatch-cancel`.
 
 Record that the foreground operation was human-interrupted. Do not claim that its partial file changes were reverted.
 
@@ -170,7 +170,7 @@ Do not promise automatic rollback.
 
 Use native `Read`, `Glob`, `Grep`, and `Edit` operations for workflow state.
 
-Do not use Bash, PowerShell, shell redirection, heredocs, `sed`, or `cat` to maintain `.claude/personal` files.
+Do not use Bash, PowerShell, shell redirection, heredocs, `sed`, or `cat` to maintain `.claude/personal/.dispatcher` files.
 
 Modify only the exact run identified by the supplied task ID.
 

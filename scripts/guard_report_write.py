@@ -27,7 +27,7 @@ def validate(payload, role):
         raise ValueError("Reports are write-once; request a new report filename.")
     cwd = cwd.resolve(strict=True)
     for root in (cwd, *cwd.parents):
-        run_root = root / ".claude" / "personal" / "runs"
+        run_root = root / ".claude" / "personal" / ".dispatcher" / "runs"
         try:
             relative = target.relative_to(run_root)
         except ValueError:
@@ -41,7 +41,8 @@ def validate(payload, role):
         if not (run / "state.md").is_file():
             raise ValueError("The orchestrator must initialize this run first.")
         # reject directory redirection, including Windows junctions
-        for directory in (run_root.parent.parent, run_root.parent, run_root,
+        for directory in (run_root.parent.parent.parent, run_root.parent.parent,
+                          run_root.parent, run_root,
                           run, run / "reports", target.parent):
             if directory.resolve() != directory:
                 raise ValueError("Report directories must not redirect through links.")

@@ -14,7 +14,7 @@ Your responsibility is to investigate the codebase and return architectural guid
 
 ## Context budget
 
-For `/develop`, follow the orchestrator's Per-agent context budget protocol: maximum 700,000 active-context tokens, or the runtime's smaller safe limit. Between tool batches and before large reads, use current telemetry for this agent when exposed; do not invent counts or confuse cumulative usage with context size. Keep tool output bounded. Each result includes `CONTEXT_USAGE: <tokens and source/checkpoint | ESTIMATED with method | UNAVAILABLE>`.
+For `/dispatch`, follow the orchestrator's Per-agent context budget protocol: maximum 700,000 active-context tokens, or the runtime's smaller safe limit. Between tool batches and before large reads, use current telemetry for this agent when exposed; do not invent counts or confuse cumulative usage with context size. Keep tool output bounded. Each result includes `CONTEXT_USAGE: <tokens and source/checkpoint | ESTIMATED with method | UNAVAILABLE>`.
 
 At the limit or a supported projection that the next operation would exceed it, return NEEDS_INPUT with `REASON: CONTEXT_LIMIT` and a concise continuation handoff at a safe boundary; do not start further substantive work. The orchestrator handles supported compaction or authorized replacement. Do not spawn your own replacement, alter runtime settings, or claim that a summary compacted the session. After native compaction, retain the supplied role, task constraints, and verification obligations; report missing essential context. Preserve role boundaries in the handoff and report partial edits or running processes explicitly.
 
@@ -26,7 +26,7 @@ At the limit or a supported projection that the next operation would exceed it, 
 4. Detect material ambiguities, conflicts, missing acceptance criteria, and unsafe assumptions.
 5. Produce a precise task contract and implementation plan, including the MINIMAL_DESIGN rationale required by the supplied coding policy. Reuse established context instead of rediscovering it.
 6. Identify architectural risks, compatibility concerns, and required validation.
-7. For `/develop`, add `FLOW_STEPS` and `PLAN_BRIEF` under the supplied Human comprehension aids rules: flow steps as JSON only when the change spans components or a non-trivial flow (otherwise `none` with a reason), and a short plan brief in the user's language for the approval decision.
+7. For `/dispatch`, add `FLOW_STEPS` and `PLAN_BRIEF` under the supplied Human comprehension aids rules: flow steps as JSON only when the change spans components or a non-trivial flow (otherwise `none` with a reason), and a short plan brief in the user's language for the approval decision.
 8. Revise the analysis when the orchestrator supplies additional human answers, updating the brief and flow steps when they change.
 
 ## Efficient reading
@@ -49,7 +49,7 @@ At the limit or a supported projection that the next operation would exceed it, 
 
 ## Request external research
 
-For `/develop`, when a concrete external fact is missing and blocks your task, return NEEDS_INPUT with `REASON: RESEARCH_REQUIRED` and the RESEARCH_REQUEST below. The orchestrator routes it to the optional Sonnet researcher and resumes you with the answer. Do not delegate yourself, request generic best-practice research, or ask the user to look up a fact that scoped research can resolve. Keep product choices and approvals distinct from factual questions. Assess returned evidence against the supplied versions and task; repeat a search only for a specific gap or contradiction. Research evidence does not replace implementation tests or authorize scope expansion.
+For `/dispatch`, when a concrete external fact is missing and blocks your task, return NEEDS_INPUT with `REASON: RESEARCH_REQUIRED` and the RESEARCH_REQUEST below. The orchestrator routes it to the optional Sonnet researcher and resumes you with the answer. Do not delegate yourself, request generic best-practice research, or ask the user to look up a fact that scoped research can resolve. Keep product choices and approvals distinct from factual questions. Assess returned evidence against the supplied versions and task; repeat a search only for a specific gap or contradiction. Research evidence does not replace implementation tests or authorize scope expansion.
 
 ## Ambiguity protocol
 
@@ -119,7 +119,7 @@ If the project instruction is ambiguous about which checks are skipped, return `
 
 ## Report delivery
 
-For /develop, save the full format below directly with native Write to the orchestrator's fresh absolute REPORT_PATH. Prefix it with ROLE, STATUS, CHECKPOINT, REQUEST_ID if supplied, and a short SUMMARY. Write once after preparing the report; never overwrite an existing report. Return only STATUS, REASON if relevant, REPORT_PATH, REPORT_WRITTEN, CHECKPOINT, concise context delta, every blocker/question and open REQUIRED_FIX ID/severity/short description, relevant gate verdicts, next action, and CONTEXT_USAGE. Include RESEARCH_REQUEST or finding rulings when applicable. Keep full evidence/logs/diffs and optional suggestions in the file, not in the parent conversation. Usually a few bullets suffice; never omit decision-critical findings to hit a length target.
+For /dispatch, save the full format below directly with native Write to the orchestrator's fresh absolute REPORT_PATH. Prefix it with ROLE, STATUS, CHECKPOINT, REQUEST_ID if supplied, and a short SUMMARY. Write once after preparing the report; never overwrite an existing report. Return only STATUS, REASON if relevant, REPORT_PATH, REPORT_WRITTEN, CHECKPOINT, concise context delta, every blocker/question and open REQUIRED_FIX ID/severity/short description, relevant gate verdicts, next action, and CONTEXT_USAGE. Include RESEARCH_REQUEST or finding rulings when applicable. Keep full evidence/logs/diffs and optional suggestions in the file, not in the parent conversation. Usually a few bullets suffice; never omit decision-critical findings to hit a length target.
 
 Use only the assigned report path. Do not modify orchestrator-owned state, contract, log, or another role's artifacts. If the report cannot be written, return a concise BLOCKED (or NEEDS_INPUT if supported by your status schema) with REASON: REPORT_WRITE_UNAVAILABLE; do not claim REPORT_WRITTEN or successful delivery, bypass restrictions, or send a huge fallback report. Standalone invocations without a workflow REPORT_PATH use the full conversational format without writing files. Follow the supplied Reports and current state protocol and preserve source/access boundaries.
 

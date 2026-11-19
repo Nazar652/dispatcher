@@ -1,0 +1,126 @@
+<h2 class="sr-only">{{SUMMARY}}</h2>
+<style>
+.fl{font-size:15px;line-height:1.55;color:var(--text-primary);padding:4px 0}
+.fl-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0 0 12px;flex-wrap:wrap}
+.fl-btn{font:inherit;font-size:13px;padding:4px 12px;border:0.5px solid var(--border-strong);border-radius:var(--radius);background:transparent;color:var(--text-primary);cursor:pointer}
+.fl-actors{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin:0 0 8px}
+.fl-actor{border:0.5px solid var(--border);border-radius:var(--radius);padding:8px 10px}
+.fl-mono{font-family:var(--font-mono);font-size:13px}
+.fl-muted{font-size:13px;color:var(--text-secondary)}
+.fl-phase{margin:18px 0 6px;font-weight:500;display:flex;gap:8px;align-items:center}
+.fl-par{border-left:2px solid var(--border-accent);border-radius:0;padding-left:10px}
+.fl-step{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:8px 6px;border-radius:var(--radius);cursor:pointer}
+.fl-step:hover,.fl-step:focus{background:var(--surface-1);outline:none}
+.fl-num{width:26px;height:26px;border-radius:50%;border:0.5px solid var(--border-strong);font-size:13px;display:flex;align-items:center;justify-content:center;color:var(--text-secondary)}
+.fl-pill{font-size:12px;padding:1px 8px;border-radius:999px;white-space:nowrap;margin-left:6px}
+.fl-new{background:var(--bg-success);color:var(--text-success)}.fl-changed{background:var(--bg-warning);color:var(--text-warning)}.fl-parpill{background:var(--bg-accent);color:var(--text-accent);margin-left:0}
+</style>
+<div class="fl" id="flow"></div>
+<script type="application/json" id="flow-data">
+{{FLOW_JSON}}
+</script>
+<script>
+(function () {
+  const texts = {
+    en: { new: 'new', changed: 'changed', parallel: 'parallel', onlyChanges: 'Only changes', allSteps: 'All steps', explain: 'Explain step', participants: 'Participants' },
+  };
+  const root = document.getElementById('flow');
+  let data;
+  try {
+    data = JSON.parse(document.getElementById('flow-data').textContent);
+  } catch (error) {
+    root.textContent = 'Flow data is not valid JSON: ' + error.message;
+    return;
+  }
+  const label = texts[data.lang] || texts.en;
+  const participants = Object.fromEntries((data.participants || []).map(p => [p.id, p]));
+
+  function element(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function statusPill(status) {
+    if (status !== 'new' && status !== 'changed') return null;
+    return element('span', 'fl-pill fl-' + status, label[status]);
+  }
+
+  function displayName(id) {
+    return participants[id] ? participants[id].name : id;
+  }
+
+  const bar = element('div', 'fl-bar');
+  bar.appendChild(element('div', 'fl-muted', label.participants));
+  const toggle = element('button', 'fl-btn', label.onlyChanges);
+  bar.appendChild(toggle);
+  root.appendChild(bar);
+
+  const actors = element('div', 'fl-actors');
+  (data.participants || []).forEach(p => {
+    const card = element('div', 'fl-actor');
+    const head = element('div');
+    head.appendChild(element('span', 'fl-mono', p.name));
+    const pill = statusPill(p.status);
+    if (pill) head.appendChild(pill);
+    card.appendChild(head);
+    if (p.role) card.appendChild(element('div', 'fl-muted', p.role));
+    actors.appendChild(card);
+  });
+  root.appendChild(actors);
+
+  const phaseBlocks = [];
+  let stepNumber = 0;
+  (data.phases || []).forEach(phase => {
+    const block = element('div');
+    const title = element('div', 'fl-phase');
+    title.appendChild(element('span', '', phase.title));
+    if (phase.parallel) title.appendChild(element('span', 'fl-pill fl-parpill', label.parallel));
+    block.appendChild(title);
+    const list = element('div', phase.parallel ? 'fl-par' : '');
+    const steps = [];
+    (phase.steps || []).forEach(step => {
+      stepNumber += 1;
+      const number = stepNumber;
+      const row = element('div', 'fl-step');
+      row.tabIndex = 0;
+      row.setAttribute('role', 'button');
+      row.appendChild(element('div', 'fl-num', String(number)));
+      const body = element('div');
+      const route = displayName(step.from) + (step.to ? ' → ' + displayName(step.to) : '');
+      body.appendChild(element('div', 'fl-mono fl-muted', route));
+      const action = element('div');
+      action.appendChild(element('span', '', step.action));
+      const pill = statusPill(step.status);
+      if (pill) action.appendChild(pill);
+      body.appendChild(action);
+      if (step.note) body.appendChild(element('div', 'fl-muted', step.note));
+      row.appendChild(body);
+      const ask = () => sendPrompt(label.explain + ' ' + number + ' (' + (data.title || '') + '): ' + route + ' — ' + step.action);
+      row.addEventListener('click', ask);
+      row.addEventListener('keydown', event => { if (event.key === 'Enter') ask(); });
+      list.appendChild(row);
+      steps.push({ row: row, changed: step.status === 'new' || step.status === 'changed' });
+    });
+    block.appendChild(list);
+    root.appendChild(block);
+    phaseBlocks.push({ block: block, steps: steps });
+  });
+
+  let onlyChanges = false;
+  toggle.addEventListener('click', () => {
+    onlyChanges = !onlyChanges;
+    toggle.textContent = onlyChanges ? label.allSteps : label.onlyChanges;
+    phaseBlocks.forEach(phase => {
+      let visible = 0;
+      phase.steps.forEach(step => {
+        const show = !onlyChanges || step.changed;
+        step.row.style.display = show ? '' : 'none';
+        if (show) visible += 1;
+      });
+      phase.block.style.display = visible ? '' : 'none';
+    });
+  });
+})();
+</script>

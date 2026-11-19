@@ -1,0 +1,15 @@
+{
+  "name": "team-plugins",
+  "owner": {
+    "name": "dev-workflow maintainers"
+  },
+  "description": "Internal Claude Code plugins for the team.",
+  "allowCrossMarketplaceDependenciesOn": ["claude-plugins-official"],
+  "plugins": [
+    {
+      "name": "dev-workflow",
+      "source": "./plugins/dev-workflow",
+      "description": "Guided multi-agent development workflow (/develop and helper commands)."
+    }
+  ]
+}

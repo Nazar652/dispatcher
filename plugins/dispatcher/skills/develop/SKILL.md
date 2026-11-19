@@ -13,7 +13,7 @@ $ARGUMENTS
 
 ## Session-scoped role restoration
 
-The dev-workflow plugin ships a SessionStart hook that runs on every compaction/resume, but it stays silent unless the session holds an active /develop registration, which only an actual /develop invocation creates. Reading this file as policy data does not activate it. This is a role reminder after compaction/resume, not a context-size limit or a tool-permission guard.
+The dispatcher plugin ships a SessionStart hook that runs on every compaction/resume, but it stays silent unless the session holds an active /develop registration, which only an actual /develop invocation creates. Reading this file as policy data does not activate it. This is a role reminder after compaction/resume, not a context-size limit or a tool-permission guard.
 
 The current invocation's runtime session ID is `${CLAUDE_SESSION_ID}`. After resolving the project root and creating the run's initial state, and before the first specialist delegation, use native Write to create `<run>/orchestrator-session.json` with exactly this small registration (substitute the actual runtime ID):
 
@@ -55,7 +55,7 @@ Delegate directly from the main conversation to:
 - `security-reviewer` when classified `REQUIRED`;
 - `database-reviewer` when classified `REQUIRED`.
 
-These specialists ship with the dev-workflow plugin. Always dispatch them by their plugin-scoped agent type, `dev-workflow:<role>` (for example `dev-workflow:architect`), never the bare role name, which may resolve to an unrelated user or project agent. Elsewhere this workflow refers to them by role name only.
+These specialists ship with the dispatcher plugin. Always dispatch them by their plugin-scoped agent type, `dispatcher:<role>` (for example `dispatcher:architect`), never the bare role name, which may resolve to an unrelated user or project agent. Elsewhere this workflow refers to them by role name only.
 
 Never ask a subagent to delegate work to another subagent.
 

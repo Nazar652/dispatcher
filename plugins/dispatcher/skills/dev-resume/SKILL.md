@@ -35,7 +35,7 @@ Locate:
 
 `.claude/personal/runs/<task-id>/`
 
-Read state.md first. Apply the Agent continuity and focused handoffs and Reports and current state sections of sibling ../develop/SKILL.md as shared rules, without invoking GUIDED mode. When creating a specialist, dispatch it by its plugin-scoped agent type `dev-workflow:<role>` (for example `dev-workflow:architect`), never the bare role name. Then read only:
+Read state.md first. Apply the Agent continuity and focused handoffs and Reports and current state sections of sibling ../develop/SKILL.md as shared rules, without invoking GUIDED mode. When creating a specialist, dispatch it by its plugin-scoped agent type `dispatcher:<role>` (for example `dispatcher:architect`), never the bare role name. Then read only:
 
 - current task-contract.md sections needed for the persisted phase, including approval and relevant policy;
 - applicable project-context.md sections when needed;

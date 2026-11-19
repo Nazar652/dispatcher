@@ -10,7 +10,7 @@ ROLES = {
     "architect", "manual-tester", "code-reviewer", "security-reviewer",
     "database-reviewer", "researcher",
 }
-PLUGIN_PREFIX = "dev-workflow:"
+PLUGIN_PREFIX = "dispatcher:"
 
 
 def validate(payload, role):
@@ -52,7 +52,7 @@ def validate(payload, role):
 
 
 def guarded_role(payload):
-    # plugin agents report a namespaced type such as "dev-workflow:architect"
+    # plugin agents report a namespaced type such as "dispatcher:architect"
     agent_type = payload.get("agent_type") if isinstance(payload, dict) else None
     if not isinstance(agent_type, str):
         return None

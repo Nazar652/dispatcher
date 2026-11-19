@@ -1,4 +1,4 @@
-# dev-workflow
+# dispatcher
 
 A Claude Code plugin that adds a guided, multi-agent development workflow. The `/develop` command takes a task through an architect, a developer, a manual tester and reviewers. Every stage ends with a written report, and you approve the plan and the result.
 
@@ -12,9 +12,9 @@ A Claude Code plugin that adds a guided, multi-agent development workflow. The `
 | `/dev-cancel <task-id>` | Permanently cancels a run |
 | `/dev-settings ...` | Per-project settings such as how to start, test or lint the project |
 
-If a short name is taken by another command, use the full one, for example `/dev-workflow:develop`.
+If a short name is taken by another command, use the full one, for example `/dispatcher:develop`.
 
-The agents are `architect`, `developer`, `manual-tester`, `code-reviewer`, `security-reviewer`, `database-reviewer` and `researcher`, all prefixed with `dev-workflow:`.
+The agents are `architect`, `developer`, `manual-tester`, `code-reviewer`, `security-reviewer`, `database-reviewer` and `researcher`, all prefixed with `dispatcher:`.
 
 ## Installation
 
@@ -22,14 +22,14 @@ From a git repository:
 
 ```
 claude plugin marketplace add <org>/<repo>
-claude plugin install dev-workflow@team-plugins
+claude plugin install dispatcher@team-plugins
 ```
 
 From a local folder, without git:
 
 ```
-claude plugin marketplace add /path/to/dev-workflow
-claude plugin install dev-workflow@team-plugins
+claude plugin marketplace add /path/to/repo
+claude plugin install dispatcher@team-plugins
 ```
 
 You can run the same commands inside a session as `/plugin marketplace add ...` and `/plugin install ...`. Start a new session afterwards so the plugin loads.
@@ -41,7 +41,7 @@ For a private repository, git must work without a password prompt, for example t
 To try the plugin without installing it, load it for a single session:
 
 ```
-claude --plugin-dir /path/to/dev-workflow/plugins/dev-workflow
+claude --plugin-dir /path/to/repo/plugins/dispatcher
 ```
 
 ## Requirements
@@ -60,7 +60,7 @@ Run state and reports are stored in `<project>/.claude/personal/`. Add this fold
 
 ## Updating
 
-The maintainer edits the files, bumps `version` in `plugins/dev-workflow/.claude-plugin/plugin.json` and pushes. Everyone else pulls the update with:
+The maintainer edits the files, bumps `version` in `plugins/dispatcher/.claude-plugin/plugin.json` and pushes. Everyone else pulls the update with:
 
 ```
 claude plugin marketplace update team-plugins
@@ -72,7 +72,7 @@ Auto-update is off by default for private marketplaces.
 
 ```
 .claude-plugin/marketplace.json      marketplace catalog (team-plugins)
-plugins/dev-workflow/
+plugins/dispatcher/
   .claude-plugin/plugin.json         plugin manifest
   skills/                            develop, dev-status, dev-resume, dev-cancel, dev-settings
   agents/                            the seven specialist agents

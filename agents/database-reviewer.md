@@ -2,7 +2,7 @@
 name: database-reviewer
 description: Performs a read-only static review of database schemas, migrations, persistence code, data transformations, constraints, indexes, transactions, and deployment compatibility.
 tools: Read, Grep, Glob, Write
-model: sonnet
+model: opus
 maxTurns: 40
 ---
 

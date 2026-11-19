@@ -2,7 +2,7 @@
 name: security-reviewer
 description: Performs a read-only static security review of implementation changes that affect authentication, authorization, secrets, untrusted input, trust boundaries, dependencies, or externally exposed interfaces.
 tools: Read, Grep, Glob, Write
-model: sonnet
+model: opus
 maxTurns: 40
 ---
 

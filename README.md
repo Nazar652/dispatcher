@@ -45,9 +45,17 @@ claude --plugin-dir /path/to/repo
 
 ## Requirements
 
-- `python3` 3.9 or newer on `PATH`. The plugin's hooks run on it.
+- `python3` 3.9 or newer on `PATH`, for one hook only: the reminder after `/compact` or `/resume`. The other hooks are TypeScript that Claude Code runs itself and need nothing installed. Without `python3` that reminder is not delivered; continue the run with `/dispatch-resume <task-id>`.
 - Access to the Opus, Sonnet and Haiku models. By default the architect and the security and database reviewers run on Opus, the developer and code reviewer on Sonnet, and the manual tester and researcher on Haiku; see Settings to change this.
 - Recommended: the Playwright plugin, which the manual tester uses for browser checks. Without it the tester falls back to the CLI and API. Install it with `claude plugin install playwright@claude-plugins-official`.
+
+### Windows, Linux and WSL
+
+- Windows: the report guard and the model settings read `C:\...` paths with either separator, and the global settings come from `HOME` or, when that is not a Windows path, `USERPROFILE`. Check that `python3 --version` works in the shell Claude Code uses for hooks. The Microsoft Store `python3` shortcut that only opens the Store does not count: turn it off under App execution aliases, or install Python so that `python3` runs it.
+- Linux: minimal images often have no `python3`; install version 3.9 or newer for the reminder hook.
+- WSL: install and run Claude Code inside WSL and it behaves as on Linux, with Linux paths and the WSL `python3`.
+- Known limitation: the architect, manual tester, reviewers and researcher cannot write their reports when the project is reached through a symbolic link, a junction, a mapped network drive, a `subst` drive or a network path. Open the project by its real local path.
+- If a specialist's report write fails with `Report write denied: ...`, the text names the check that refused it. Right after setup on a new platform, the architect's first report is a quick test that the guard accepts your paths.
 
 ## Settings
 
@@ -121,15 +129,17 @@ skills/                              dispatch, dispatch-status, dispatch-resume,
                                      dispatch-settings, dispatch-global-settings
 agents/                              the seven specialist agents
 hooks/hooks.json                     plugin hooks
-hooks/index.ts                       hooks module entry: registers agent-models and context-usage
+hooks/index.ts                       hooks module entry: registers agent-models, context-usage and report-guard
 hooks/agent-models.ts                agent.spawn hook that applies per-agent models and reads the role settings (tests next to it)
 hooks/context-usage.ts               tool.call hook that measures each dispatcher agent's context (tests next to it)
-scripts/                             Python scripts used by the hooks
+hooks/report-guard.ts                tool.call and tool.check hooks that limit specialists' writes to their own new reports (tests next to it)
+hooks/paths.ts                       path helpers for POSIX and Windows paths, shared by the hooks (tests next to it)
+scripts/                             the Python script of the post-compaction reminder hook
 ```
 
 Hooks:
 
 - `agent-models.ts` (`agent.spawn`) sets the model of each fresh `dispatcher:*` agent from the settings files, unless the orchestrator passed one explicitly.
 - `context-usage.ts` (`tool.call`, `turn.complete`) measures the context of each `dispatcher:*` agent from the engine's own token count. It shows the agent itself a `dispatcher context usage` line after its tool results only from 80% of its limit; at the limit the line says it is reached. Each time such an agent's run ends, in the background, foreground or resumed, it also adds one line to the main conversation as a model-only reminder, so `/dispatch` records a measured number; it never changes the completion notification or the agent's report. The limit is the role's `context` setting (default 500,000), held to the model's window. It only reports and never blocks a tool.
-- `guard_report_write.py` (PreToolUse on Write and Edit) lets the architect, manual tester, reviewers and researcher only create their own reports in `.claude/personal/.dispatcher/runs/<task>/reports/<role>/`. It does not affect the main session, the `developer` agent or any other agent.
+- `report-guard.ts` (`tool.call` on Write and Edit, `tool.check` on Write) lets the architect, manual tester, reviewers and researcher only create their own new report in `.claude/personal/.dispatcher/runs/<task>/reports/<role>/`, in a run the orchestrator has initialized; any other Write or Edit by them is refused with `Report write denied: ...`. It allows a valid report without a permission prompt, but your own deny and ask rules still apply. If the check itself fails, the call is refused. It does not affect the main session, the `developer` agent or any other agent.
 - `restore_dispatch_orchestrator.py` (SessionStart after compact or resume) reminds the main session of its orchestrator role. It only fires in a session that actually started `/dispatch`.

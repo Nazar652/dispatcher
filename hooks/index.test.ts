@@ -40,3 +40,16 @@ test('the single entry activates both the model and the context usage hooks', as
   expect(JSON.stringify(appendedRows)).toContain('dispatcher context usage: agent agent-1')
   expect(JSON.stringify(appendedRows)).toContain('120000 of 300000 tokens')
 })
+
+test('the single entry also activates the report guard', async ($, on) => {
+  on('agent.list', () => ({
+    value: [{ id: AGENT_ID, type: 'dispatcher:architect', cwd: `${PROJECT}/src`, tokenCount: 0 } as AgentInfo],
+  }))
+  on('fs.stat', ($, e) => {
+    if (e.path !== `${PROJECT}/src`) throw new Error(`missing ${e.path}`)
+    return { value: { kind: 'dir', size: 0, mtimeMs: 0, isLink: false, realPath: e.path } }
+  })
+
+  const response = await $.tool.call({ tool: 'Write', file_path: `${PROJECT}/notes.md`, content: 'x', agentId: AGENT_ID })
+  expect(response.deny).toBe("Report write denied: Write is limited to this project's runs/<task>/reports/<role> directory.")
+})

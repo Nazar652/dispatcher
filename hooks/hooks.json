@@ -11,18 +11,6 @@
           }
         ]
       }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/guard_report_write.py\"",
-            "timeout": 10
-          }
-        ]
-      }
     ]
   },
   "modules": [

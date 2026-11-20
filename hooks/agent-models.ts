@@ -1,4 +1,5 @@
 import type { EngineInterface, Register } from 'claude-code'
+import { anchorPartCount, isSamePath, joinPath, pathStyle, splitPath } from './paths'
 
 // Reads the `## Agent models` section of the global and project settings files:
 // each role line holds a model, an effort and a context cap. This hook applies
@@ -7,7 +8,7 @@ import type { EngineInterface, Register } from 'claude-code'
 // The context cap is applied by context-usage.ts, which reads it from here.
 
 export const AGENT_PREFIX = 'dispatcher:'
-const SETTINGS_PATH = '.claude/personal/.dispatcher/settings.md'
+const SETTINGS_PARTS = ['.claude', 'personal', '.dispatcher', 'settings.md']
 const MODEL_PATTERN = /^(sonnet|opus|haiku|fable|claude-[a-z0-9][a-z0-9.-]*)$/i
 
 const MINIMUM_CONTEXT_TOKENS = 50_000
@@ -46,12 +47,10 @@ export function parseAgentSettings(settingsText: string): Record<string, AgentSe
 
 // the settings of both files for the project containing `startDir`, as /dispatch resolves them
 export async function readAgentSettings($: EngineInterface, startDir: string): Promise<AgentSettingsFiles> {
-  const home = await $.env.get('HOME')
+  const home = await findHome($, startDir)
   const projectRoot = await findProjectRoot($, startDir)
-  const globalSettings = home ? parseAgentSettings(await readOrEmpty($, `${home}/${SETTINGS_PATH}`)) : {}
-  const projectSettings = projectRoot === home
-    ? {}
-    : parseAgentSettings(await readOrEmpty($, `${projectRoot}/${SETTINGS_PATH}`))
+  const globalSettings = home === undefined ? {} : await readSettingsFile($, home)
+  const projectSettings = home !== undefined && isSamePath(projectRoot, home) ? {} : await readSettingsFile($, projectRoot)
   return { globalSettings, projectSettings }
 }
 
@@ -81,13 +80,31 @@ async function readOrEmpty($: EngineInterface, path: string): Promise<string> {
   }
 }
 
+// the home folder is HOME, or USERPROFILE where HOME is unset or in another path style (MSYS `/c/Users/tester` beside `C:\Users\tester`)
+async function findHome($: EngineInterface, startDir: string): Promise<string | undefined> {
+  const startStyle = pathStyle(startDir)
+  if (startStyle === undefined) return undefined
+
+  const candidates = [await $.env.get('HOME'), await $.env.get('USERPROFILE')]
+  return candidates.find(candidate => pathStyle(candidate) === startStyle)
+}
+
+async function readSettingsFile($: EngineInterface, rootDirectory: string): Promise<Record<string, AgentSettings>> {
+  const style = pathStyle(rootDirectory)
+  if (style === undefined) return {}
+
+  return parseAgentSettings(await readOrEmpty($, joinPath([...splitPath(rootDirectory, style), ...SETTINGS_PARTS], style)))
+}
+
 // the nearest directory holding `.git` (a folder, or a file in a worktree), as /dispatch resolves it
 async function findProjectRoot($: EngineInterface, startDir: string): Promise<string> {
-  let dir = startDir.replace(/\/+$/, '') || '/'
-  while (true) {
-    if (await $.fs.exists(`${dir}/.git`)) return dir
-    const parent = dir.slice(0, dir.lastIndexOf('/')) || '/'
-    if (parent === dir) return startDir
-    dir = parent
+  const style = pathStyle(startDir)
+  if (style === undefined) return startDir
+
+  const parts = splitPath(startDir, style)
+  for (let length = parts.length; length >= anchorPartCount(style); length -= 1) {
+    const ancestorParts = parts.slice(0, length)
+    if (await $.fs.exists(joinPath([...ancestorParts, '.git'], style))) return joinPath(ancestorParts, style)
   }
+  return startDir
 }

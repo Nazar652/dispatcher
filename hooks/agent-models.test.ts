@@ -68,7 +68,7 @@ test('reads both settings files, and skips the project file when the project is 
   }
   // the reader uses only these three engine calls
   const engine = {
-    env: { get: async () => HOME },
+    env: { get: async (name: string) => (name === 'HOME' ? HOME : undefined) },
     fs: {
       exists: async (path: string) => path === `${PROJECT}/.git` || path === `${HOME}/.git`,
       read: async (path: string) => files[path] ?? '',
@@ -83,6 +83,92 @@ test('reads both settings files, and skips the project file when the project is 
     globalSettings: { developer: { contextTokens: 100_000 } },
     projectSettings: {},
   })
+})
+
+// the reader's three engine calls over a fake file system; `variables` answers env by name
+function fakeEngine(variables: Record<string, string>, folders: string[], files: Record<string, string>): EngineInterface {
+  return {
+    env: { get: async (name: string) => variables[name] },
+    fs: {
+      exists: async (path: string) => folders.includes(path),
+      read: async (path: string) => {
+        if (files[path] === undefined) throw new Error(`missing ${path}`)
+        return files[path]
+      },
+    },
+  } as unknown as EngineInterface
+}
+
+const WINDOWS_HOME = 'C:\\Users\\tester'
+const WINDOWS_GLOBAL_FILE = `${WINDOWS_HOME}\\.claude\\personal\\.dispatcher\\settings.md`
+const WINDOWS_PROJECT_FILE = 'C:\\work\\app\\.claude\\personal\\.dispatcher\\settings.md'
+
+test('a windows project reads both files at windows paths, with the home folder from USERPROFILE', async () => {
+  const engine = fakeEngine({ USERPROFILE: WINDOWS_HOME }, ['C:\\work\\app\\.git'], {
+    [WINDOWS_GLOBAL_FILE]: settings('- developer: context=100000'),
+    [WINDOWS_PROJECT_FILE]: settings('- developer: model=haiku'),
+  })
+
+  expect(await readAgentSettings(engine, 'C:\\work\\app\\src')).toEqual({
+    globalSettings: { developer: { contextTokens: 100_000 } },
+    projectSettings: { developer: { model: 'haiku' } },
+  })
+})
+
+test('a windows start directory with forward slashes finds the same project root', async () => {
+  const engine = fakeEngine({ USERPROFILE: WINDOWS_HOME }, ['C:\\work\\app\\.git'], {
+    [WINDOWS_PROJECT_FILE]: settings('- developer: model=haiku'),
+  })
+
+  expect((await readAgentSettings(engine, 'C:/work/app/src/')).projectSettings).toEqual({ developer: { model: 'haiku' } })
+})
+
+test('an MSYS-style HOME is skipped for a windows project, and USERPROFILE is used', async () => {
+  const engine = fakeEngine({ HOME: '/c/Users/tester', USERPROFILE: WINDOWS_HOME }, ['C:\\work\\app\\.git'], {
+    [WINDOWS_GLOBAL_FILE]: settings('- developer: context=100000'),
+  })
+
+  expect((await readAgentSettings(engine, 'C:\\work\\app')).globalSettings).toEqual({
+    developer: { contextTokens: 100_000 },
+  })
+})
+
+test('a posix project ignores a windows USERPROFILE, and HOME wins when both fit', async () => {
+  const engine = fakeEngine({ USERPROFILE: WINDOWS_HOME }, [`${PROJECT}/.git`], { [GLOBAL_FILE]: settings('- developer: model=opus') })
+  expect((await readAgentSettings(engine, `${PROJECT}/src`)).globalSettings).toEqual({})
+
+  const both = fakeEngine({ HOME, USERPROFILE: '/other/home' }, [`${PROJECT}/.git`], {
+    [GLOBAL_FILE]: settings('- developer: model=opus'),
+    '/other/home/.claude/personal/.dispatcher/settings.md': settings('- developer: model=haiku'),
+  })
+  expect((await readAgentSettings(both, `${PROJECT}/src`)).globalSettings).toEqual({ developer: { model: 'opus' } })
+})
+
+test('a sibling folder sharing a name prefix is not the project root', async () => {
+  const engine = fakeEngine({ USERPROFILE: WINDOWS_HOME }, ['C:\\work\\app\\.git'], {
+    [WINDOWS_PROJECT_FILE]: settings('- developer: model=haiku'),
+  })
+
+  expect((await readAgentSettings(engine, 'C:\\work\\app2\\src')).projectSettings).toEqual({})
+})
+
+test('a windows project that is the home folder in another case skips the project file', async () => {
+  const engine = fakeEngine({ USERPROFILE: WINDOWS_HOME }, ['c:\\users\\TESTER\\.git'], {
+    [WINDOWS_GLOBAL_FILE]: settings('- developer: context=100000'),
+    'c:\\users\\TESTER\\.claude\\personal\\.dispatcher\\settings.md': settings('- developer: model=haiku'),
+  })
+
+  expect(await readAgentSettings(engine, 'c:\\users\\TESTER')).toEqual({
+    globalSettings: { developer: { contextTokens: 100_000 } },
+    projectSettings: {},
+  })
+})
+
+test('a relative or network start directory finds no settings files', async () => {
+  const engine = fakeEngine({ HOME, USERPROFILE: WINDOWS_HOME }, [], { [GLOBAL_FILE]: settings('- developer: model=opus') })
+
+  expect(await readAgentSettings(engine, 'work/app')).toEqual({ globalSettings: {}, projectSettings: {} })
+  expect(await readAgentSettings(engine, '\\\\server\\share\\app')).toEqual({ globalSettings: {}, projectSettings: {} })
 })
 
 test('a project model wins over the global one', async ($, on) => {

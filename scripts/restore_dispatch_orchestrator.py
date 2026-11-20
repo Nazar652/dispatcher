@@ -79,7 +79,7 @@ def reminder(payload, initial_project=None):
 
 def main():
     try:
-        context = reminder(json.load(sys.stdin), os.environ.get("CLAUDE_PROJECT_DIR"))
+        context = reminder(json.load(sys.stdin.buffer), os.environ.get("CLAUDE_PROJECT_DIR"))
     except (OSError, UnicodeError, ValueError, TypeError):
         return 0
     if context:

@@ -1,6 +1,6 @@
 ---
 name: dispatch-settings
-description: Creates, displays, and updates project-level settings for the /dispatch multi-agent workflow, including per-agent models. Project settings always override the machine-wide settings managed by /dispatch-global-settings.
+description: Creates, displays, and updates project-level settings for the /dispatch multi-agent workflow, including per-agent models and context caps. Project settings always override the machine-wide settings managed by /dispatch-global-settings.
 argument-hint: "[show|set|remove|replace|clear] [project instructions]"
 disable-model-invocation: true
 allowed-tools: Read Glob Grep Bash(git rev-parse --show-toplevel) Bash(git -C * check-ignore -- .claude/personal/.dispatcher/settings.md)
@@ -113,15 +113,16 @@ Use `Write` or `Edit` for the exact settings file. These tools are intentionally
 
 ## Agent models
 
-The `## Agent models` section holds one line per specialist role with one or both fields, for example:
+The `## Agent models` section holds one line per specialist role with any of the fields `model`, `effort` and `context`, for example:
 
 - `- developer: model=claude-opus-5-1 effort=high`
 - `- researcher: model=haiku`
 - `- architect: effort=max`
+- `- developer: model=sonnet context=300000`
 
-Valid roles: `architect`, `developer`, `manual-tester`, `code-reviewer`, `security-reviewer`, `database-reviewer`, `researcher`. Valid `model` values: the aliases `sonnet`, `opus`, `haiku`, `fable` (always the latest version), or a full model ID starting with `claude-` (a pinned version). Valid `effort` values: `low`, `medium`, `high`, `xhigh`, `max`.
+Valid roles: `architect`, `developer`, `manual-tester`, `code-reviewer`, `security-reviewer`, `database-reviewer`, `researcher`. Valid `model` values: the aliases `sonnet`, `opus`, `haiku`, `fable` (always the latest version), or a full model ID starting with `claude-` (a pinned version). Valid `effort` values: `low`, `medium`, `high`, `xhigh`, `max`. Valid `context` values: the maximum active context of that role's agents as a whole number of tokens written in digits only, at least 50,000 (a smaller cap would leave no room for a fresh agent); the default is 500,000.
 
-Translate requests such as "use opus 5.1 for the developer with high reasoning" into this exact form; ask when a version is ambiguous instead of guessing an ID. Refuse any other role or value and list the valid ones. A full model ID is checked only for its form here; tell the human that a mistyped ID fails when that agent is started. A field left out falls back to the other settings file, then to the default: the agent's own model in its latest version, and the effort Claude Code chooses.
+Translate requests such as "use opus 5.1 for the developer with high reasoning" or "limit the developer's context to 300k" (`context=300000`) into this exact form; ask when a version is ambiguous instead of guessing an ID. Refuse any other role or value and list the valid ones. A full model ID is checked only for its form here; tell the human that a mistyped ID fails when that agent is started. A field left out falls back to the other settings file, then to the default: the agent's own model in its latest version, the effort Claude Code chooses, and a context cap of 500,000 tokens. When a role line is changed, keep the fields of that line the request does not mention.
 
 ## Show operation
 
@@ -130,7 +131,7 @@ For `show`:
 1. Resolve the project root.
 2. Read the project `settings.md` if it exists and display its contents, or report `NO_PROJECT_SETTINGS`.
 3. Read `~/.claude/personal/.dispatcher/settings.md` if it exists and list which of its settings this project overrides, or report `NO_GLOBAL_SETTINGS`.
-4. Show the effective model and effort per agent role and where each comes from (`project`, `global`, or `default`).
+4. Show the effective model, effort and context cap per agent role and where each comes from (`project`, `global`, or `default`).
 5. Do not create or modify files.
 
 ## Set operation
@@ -255,7 +256,7 @@ A project instruction may explicitly skip individual tests, linters, formatters,
 
 Future `/dispatch` runs must record each such omission as `SKIPPED_BY_PROJECT_POLICY`, including its policy source and residual risk. A skipped check is never reported as `PASS`.
 
-Updated settings automatically apply to future `/dispatch` runs.
+Updated settings automatically apply to future `/dispatch` runs. A changed `context` cap in `## Agent models` is the exception: the plugin hook reads the settings files on every measurement, so it applies at once, including to running agents, and the run's recorded value follows the limit in the latest plugin line. A changed `model` or `effort` applies only when that role is next created fresh.
 
 All run paths below are relative to the resolved `<project-root>`. Workflow state belongs only in `<project-root>/.claude/personal/.dispatcher/runs/`, never at the repository top level or in the global user-level `~/.claude` directory.
 
@@ -265,7 +266,7 @@ An existing run may already contain a frozen copy at:
 
 Do not silently rewrite active-run state.
 
-To apply new settings to an existing paused run, tell the human to use:
+To apply new settings to an existing paused run (a changed `context` cap already applies through the plugin hook; resuming only refreshes the recorded value), tell the human to use:
 
 `/dispatch-resume <task-id> apply the updated project settings`
 

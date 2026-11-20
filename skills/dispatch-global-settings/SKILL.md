@@ -1,6 +1,6 @@
 ---
 name: dispatch-global-settings
-description: Creates, displays, and updates machine-wide settings for the /dispatch multi-agent workflow, including per-agent models. They apply to every project on this machine unless a project's own /dispatch-settings override them.
+description: Creates, displays, and updates machine-wide settings for the /dispatch multi-agent workflow, including per-agent models and context caps. They apply to every project on this machine unless a project's own /dispatch-settings override them.
 argument-hint: "[show|set|remove|replace|clear] [instructions]"
 disable-model-invocation: true
 allowed-tools: Read Glob Grep
@@ -39,8 +39,8 @@ Skip these sections, which apply only to a project: Resolve the project root, Gi
 ## Differences from project settings
 
 - Store only facts and preferences that hold for every project: personal working preferences, default agent models, general constraints. When an instruction names a specific repository, service, port, or command of one project, suggest `/dispatch-settings` in that project instead and do not save it globally without confirmation.
-- `show` displays the global file, or reports `NO_GLOBAL_SETTINGS`, and the effective model and effort per agent role from the global file or the default. It does not inspect projects.
-- Updated global settings apply to future `/dispatch` runs in every project. An existing paused run keeps its frozen `project-context.md` until it is resumed with `/dispatch-resume <task-id> apply the updated settings`.
+- `show` displays the global file, or reports `NO_GLOBAL_SETTINGS`, and the effective model, effort and context cap per agent role from the global file or the default. It does not inspect projects.
+- Updated global settings apply to future `/dispatch` runs in every project, except a changed `context` cap, which applies at once (see Effect on workflow runs in `../dispatch-settings/SKILL.md`). An existing paused run keeps its frozen `project-context.md` until it is resumed with `/dispatch-resume <task-id> apply the updated settings`.
 
 ## Safety boundaries
 

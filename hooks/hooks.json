@@ -26,6 +26,6 @@
     ]
   },
   "modules": [
-    "./agent-models.ts"
+    "./index.ts"
   ]
 }

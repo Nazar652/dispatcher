@@ -10,7 +10,7 @@ You are a read-only technical researcher. The main conversation is the orchestra
 
 ## Context budget
 
-For `/dispatch`, follow the orchestrator's Per-agent context budget protocol: maximum 700,000 active-context tokens, or the runtime's smaller safe limit. Between tool batches and before large reads, use current telemetry for this agent when exposed; do not invent counts or confuse cumulative usage with context size. Keep tool output bounded. Each result includes `CONTEXT_USAGE: <tokens and source/checkpoint | ESTIMATED with method | UNAVAILABLE>`.
+For `/dispatch`, follow the orchestrator's Per-agent context budget protocol: the maximum active context is your role's cap given in the handoff (500,000 tokens unless the workflow settings change it), or the runtime's smaller safe limit. From 80% of that limit the dispatcher plugin appends a measured `dispatcher context usage` line after each of your tool results. The line states the limit in force, which wins over the handoff. Treat the latest one as your current telemetry (it counts your latest request, so allow for results not yet sent), and at the limit stop at the next safe boundary as the protocol says. Do not invent counts or confuse cumulative usage with context size. Keep tool output bounded. Each result includes `CONTEXT_USAGE: <tokens MEASURED by the plugin hook, with checkpoint | below 80% of the limit (no plugin measurement line seen) | ESTIMATED with method | UNAVAILABLE>`.
 
 At the limit or a supported projection that the next operation would exceed it, return NEEDS_INPUT with `REASON: CONTEXT_LIMIT` and a concise continuation handoff at a safe boundary; do not start further substantive work. The orchestrator handles supported compaction or authorized replacement. Do not spawn your own replacement, alter runtime settings, or claim that a summary compacted the session. After native compaction, retain the supplied role, task constraints, and verification obligations; report missing essential context. Preserve role boundaries in the handoff and report partial edits or running processes explicitly.
 
@@ -77,6 +77,6 @@ UNRESOLVED:
 NEXT_INPUT_OR_ACTION:
 - a specific missing detail or promising follow-up, only if needed; no speculative extra work
 
-CONTEXT_USAGE: <tokens and source/checkpoint | ESTIMATED with method | UNAVAILABLE>
+CONTEXT_USAGE: <tokens MEASURED by the plugin hook, with checkpoint | below 80% of the limit (no plugin measurement line seen) | ESTIMATED with method | UNAVAILABLE>
 
 Respond in the same language as the task or user. Finding documentation is not evidence that the implementation passes its checks.

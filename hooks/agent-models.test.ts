@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
-import type { AgentSpawnInput, On } from 'claude-code'
-import { parseAgentModels } from './agent-models'
+import type { AgentSpawnInput, EngineInterface, On } from 'claude-code'
+import { parseAgentSettings, readAgentSettings } from './agent-models'
 
 const HOME = '/home/tester'
 const PROJECT = '/work/app'
@@ -35,8 +35,53 @@ function spawnInput(subagentType: string, model?: string): AgentSpawnInput {
 const settings = (lines: string) => `# Workflow\n\n## Agent models\n\n${lines}\n\n## Additional notes\n\n- developer: model=haiku\n`
 
 test('parses only the Agent models section and valid models', () => {
-  expect(parseAgentModels(settings('- developer: model=claude-opus-5-1 effort=high\r\n- tester: model=gpt-9\n- architect: effort=max'))).toEqual({
-    developer: 'claude-opus-5-1',
+  expect(parseAgentSettings(settings('- developer: model=claude-opus-5-1 effort=high\r\n- tester: model=gpt-9\n- architect: effort=max'))).toEqual({
+    developer: { model: 'claude-opus-5-1' },
+  })
+})
+
+test('parses context caps of at least 50000 as digits only, beside or without a model', () => {
+  expect(parseAgentSettings(settings([
+    '- developer: model=sonnet context=300000',
+    '- researcher: context=50000',
+    '- architect: context=10k',
+    '- tester: context=49999',
+    '- manual-tester: context=300,000',
+    '- code-reviewer: model=opus context=0x4e20',
+  ].join('\r\n')))).toEqual({
+    developer: { model: 'sonnet', contextTokens: 300_000 },
+    researcher: { contextTokens: 50_000 },
+    'code-reviewer': { model: 'opus' },
+  })
+})
+
+test('a role repeated in one file keeps the valid fields of every line', () => {
+  expect(parseAgentSettings(settings('- developer: model=haiku\n- developer: context=60000'))).toEqual({
+    developer: { model: 'haiku', contextTokens: 60_000 },
+  })
+})
+
+test('reads both settings files, and skips the project file when the project is the home folder', async () => {
+  const files: Record<string, string> = {
+    [GLOBAL_FILE]: settings('- developer: context=100000'),
+    [PROJECT_FILE]: settings('- developer: model=haiku'),
+  }
+  // the reader uses only these three engine calls
+  const engine = {
+    env: { get: async () => HOME },
+    fs: {
+      exists: async (path: string) => path === `${PROJECT}/.git` || path === `${HOME}/.git`,
+      read: async (path: string) => files[path] ?? '',
+    },
+  } as unknown as EngineInterface
+
+  expect(await readAgentSettings(engine, `${PROJECT}/src`)).toEqual({
+    globalSettings: { developer: { contextTokens: 100_000 } },
+    projectSettings: { developer: { model: 'haiku' } },
+  })
+  expect(await readAgentSettings(engine, HOME)).toEqual({
+    globalSettings: { developer: { contextTokens: 100_000 } },
+    projectSettings: {},
   })
 })
 
@@ -56,4 +101,13 @@ test('no settings, an explicit model, or another agent are left alone', async ($
   await $.agent.spawn(spawnInput('dispatcher:developer', 'haiku'))
   await $.agent.spawn(spawnInput('general-purpose'))
   expect(spawned).toEqual(['default', 'haiku', 'default'])
+})
+
+test('a context-only project line does not hide the global model', async ($, on) => {
+  const spawned = world(on, {
+    [GLOBAL_FILE]: settings('- developer: model=sonnet'),
+    [PROJECT_FILE]: settings('- developer: context=300000'),
+  })
+  await $.agent.spawn(spawnInput('dispatcher:developer'))
+  expect(spawned).toEqual(['sonnet'])
 })

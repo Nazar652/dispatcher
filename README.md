@@ -70,7 +70,7 @@ Both commands take `show`, `set`, `remove`, `replace` and `clear`, or free text,
 
 ### Agent models
 
-The `## Agent models` section of either file sets the model and the reasoning effort per agent, one line per role, with one or both fields:
+The `## Agent models` section of either file sets the model, the reasoning effort and the context cap per agent, one line per role, with any of the fields:
 
 ```
 ## Agent models
@@ -78,12 +78,14 @@ The `## Agent models` section of either file sets the model and the reasoning ef
 - developer: model=claude-opus-5-1 effort=high
 - researcher: model=haiku
 - architect: effort=max
+- developer: context=300000
 ```
 
 - `model`: an alias (`sonnet`, `opus`, `haiku`, `fable`), which always means the latest version, or a full model ID such as `claude-opus-5-1` to pin a version.
 - `effort`: `low`, `medium`, `high`, `xhigh` or `max`.
+- `context`: the most active context, in tokens, that agents of the role may use: digits only, at least 50,000, default 500,000. The plugin's `context-usage.ts` hook measures each agent against it (held to the model's own window) and applies a change to running agents immediately; `/dispatch` and the agents stop at the limit on the next safe boundary. A value that is not a whole number of at least 50,000 is ignored.
 
-Each field is resolved on its own: the project file first, then the global file, then the default. The default model is the agent's own (`opus` for the architect and the security and database reviewers; `sonnet` for the developer and code reviewer; `haiku` for the manual tester and researcher) in its latest version; the default effort is whatever Claude Code picks for that agent. A running agent keeps its model and effort; a change applies the next time that agent is started fresh.
+Each field is resolved on its own: the project file first, then the global file, then the default. The default context cap is 500,000 tokens; the default model is the agent's own (`opus` for the architect and the security and database reviewers; `sonnet` for the developer and code reviewer; `haiku` for the manual tester and researcher) in its latest version; the default effort is whatever Claude Code picks for that agent. A running agent keeps its model and effort; a change applies the next time that agent is started fresh.
 
 The model is applied by the plugin's `agent.spawn` hook (`hooks/agent-models.ts`), because the Agent tool itself only accepts aliases. `/dispatch` passes the effort when it starts each agent. Setting effort needs Claude Code 2.1.292 or newer.
 
@@ -119,12 +121,15 @@ skills/                              dispatch, dispatch-status, dispatch-resume,
                                      dispatch-settings, dispatch-global-settings
 agents/                              the seven specialist agents
 hooks/hooks.json                     plugin hooks
-hooks/agent-models.ts                agent.spawn hook that applies per-agent models (tests next to it)
+hooks/index.ts                       hooks module entry: registers agent-models and context-usage
+hooks/agent-models.ts                agent.spawn hook that applies per-agent models and reads the role settings (tests next to it)
+hooks/context-usage.ts               tool.call hook that measures each dispatcher agent's context (tests next to it)
 scripts/                             Python scripts used by the hooks
 ```
 
 Hooks:
 
 - `agent-models.ts` (`agent.spawn`) sets the model of each fresh `dispatcher:*` agent from the settings files, unless the orchestrator passed one explicitly.
+- `context-usage.ts` (`tool.call`, `turn.complete`) measures the context of each `dispatcher:*` agent from the engine's own token count. It shows the agent itself a `dispatcher context usage` line after its tool results only from 80% of its limit; at the limit the line says it is reached. Each time such an agent's run ends, in the background, foreground or resumed, it also adds one line to the main conversation as a model-only reminder, so `/dispatch` records a measured number; it never changes the completion notification or the agent's report. The limit is the role's `context` setting (default 500,000), held to the model's window. It only reports and never blocks a tool.
 - `guard_report_write.py` (PreToolUse on Write and Edit) lets the architect, manual tester, reviewers and researcher only create their own reports in `.claude/personal/.dispatcher/runs/<task>/reports/<role>/`. It does not affect the main session, the `developer` agent or any other agent.
 - `restore_dispatch_orchestrator.py` (SessionStart after compact or resume) reminds the main session of its orchestrator role. It only fires in a session that actually started `/dispatch`.

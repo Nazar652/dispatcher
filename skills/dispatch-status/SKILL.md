@@ -1,14 +1,14 @@
 ---
 name: dispatch-status
-description: Reports the persisted status of a /dispatch multi-agent development run without modifying state or starting agents.
+description: Reports the persisted status of a development or analysis run without modifying state or starting agents.
 argument-hint: "[task-id]"
 disable-model-invocation: true
 allowed-tools: Read Glob Grep
 ---
 
-# Development workflow status
+# Workflow status
 
-Report the persisted status of this development run:
+Report the persisted status of this run:
 
 $ARGUMENTS
 
@@ -97,7 +97,7 @@ If the last checkpoint was written before an interruption:
 
 ## Required report
 
-Use this structure:
+For `Mode: ANALYSIS`, report the task ID and title, status and phase, questions covered, evidence and verification so far, requested deliverable, pending input or blocker, and the next safe action. Include the run path and freshness of the checkpoint. For development runs use this structure:
 
 STATUS REPORT
 

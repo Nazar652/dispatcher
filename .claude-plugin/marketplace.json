@@ -8,7 +8,7 @@
     {
       "name": "dispatcher",
       "source": "./",
-      "description": "Guided multi-agent development workflow (/dispatch and helper commands)."
+      "description": "Guided development and project analysis (/dispatch, /analyze and helper commands)."
     }
   ]
 }

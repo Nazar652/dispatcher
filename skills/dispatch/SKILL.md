@@ -11,9 +11,11 @@ Run this task in GUIDED mode:
 
 $ARGUMENTS
 
+Open with the SessionStart header once in chat. Use the current session title and Claude session ID (`${CLAUDE_SESSION_ID}`); if unnamed, label a short task description as a working title. If the runtime provides no ID, say so.
+
 ## Session-scoped role restoration
 
-The dispatcher plugin ships a SessionStart hook that runs on every compaction/resume, but it stays silent unless the session holds an active /dispatch registration, which only an actual /dispatch invocation creates. Reading this file as policy data does not activate it. This is a role reminder after compaction/resume, not a context-size limit or a tool-permission guard.
+The SessionStart hook introduces new and resumed chats. Separately, on compaction or resume it restores the workflow recorded in an active registration for the exact session. Reading this file as policy data does not activate it. This is a role reminder after compaction/resume, not a context-size limit or a tool-permission guard.
 
 The current invocation's runtime session ID is `${CLAUDE_SESSION_ID}`. After resolving the project root and creating the run's initial state, and before the first specialist delegation, use native Write to create `<run>/orchestrator-session.json` with exactly this small registration (substitute the actual runtime ID):
 
@@ -23,7 +25,7 @@ The current invocation's runtime session ID is `${CLAUDE_SESSION_ID}`. After res
 
 Record this marker path and session ID in state.md. Keep a plain `STATUS: <current status>` header near the start of state.md, synchronized with the current snapshot. Never infer the session ID from a task ID, another chat, a transcript filename, or mere existence of an active run. If the runtime leaves the session placeholder unexpanded or does not support plugin hooks, report that automatic restoration is unavailable; do not invent a registration or broaden it to other sessions.
 
-The hook emits nothing unless an active /dispatch registration matches the exact incoming session ID; it ignores subagents, other sessions, and DONE/CANCELLED runs. On restoration, first recover the phase, approvals, existing agents and pending work from the named state; then continue orchestration. A missing or ambiguous checkpoint requires targeted recovery, never implementation by the main session.
+The GUIDED role reminder requires an active /dispatch registration matching the incoming session ID. It ignores subagents, other sessions, and DONE/CANCELLED runs. On restoration, first recover the phase, approvals, existing agents and pending work from the named state; then continue orchestration. A missing or ambiguous checkpoint requires targeted recovery, never implementation by the main session.
 
 Preserve the registration while this run is paused, awaiting input, blocked, or resumed in the same session. Set its `active` field to false with native Edit when the run reaches DONE/CANCELLED or the user explicitly leaves /dispatch for another workflow/task; preserve the file as history. Never deactivate another session's registration. A fresh session, /clear, or fork is not automatically registered, and reading this policy from /dispatch-resume must not activate the hook. Existing sessions that invoked an older skill version are not retroactively registered.
 
@@ -279,7 +281,7 @@ When any workflow settings file exists, also create:
 
 Maintain current summaries and pointers for these state fields under Reports and current state; keep historical/detail evidence outside the snapshot:
 
-- task ID;
+- task ID and displayed title;
 - mode;
 - status;
 - current phase;

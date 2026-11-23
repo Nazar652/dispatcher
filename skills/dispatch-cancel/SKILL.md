@@ -1,14 +1,14 @@
 ---
 name: dispatch-cancel
-description: Permanently cancels a /dispatch multi-agent development run, stops its exact known background tasks when possible, and preserves durable state and working-tree changes for inspection.
+description: Permanently cancels a development or analysis run, stops its exact known background tasks when possible, and preserves durable state and working-tree changes for inspection.
 argument-hint: "<task-id> [reason]"
 disable-model-invocation: true
 allowed-tools: Read Glob Grep Edit TaskList TaskGet TaskStop
 ---
 
-# Cancel a development run
+# Cancel a workflow
 
-Permanently cancel an existing multi-agent development workflow.
+Permanently cancel an existing development or analysis workflow.
 
 Invocation:
 
@@ -71,6 +71,8 @@ Before modifying state, record:
 - pending questions
 - repair-cycle count
 - unresolved blockers
+
+For ANALYSIS runs, use the recorded questions, evidence and pending action in place of development-only fields. A run can have no specialist.
 
 If required workflow artifacts disagree, report `STATE_INCONSISTENT` and do not modify them.
 

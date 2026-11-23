@@ -1,19 +1,21 @@
 ---
 name: dispatch-resume
-description: Resumes a paused, blocked, or interrupted multi-agent development run from its durable checkpoint while preserving agent continuity when the original Claude Code session is available.
+description: Resumes a paused, blocked, or interrupted development or analysis run from its durable checkpoint while preserving agent continuity when the original Claude Code session is available.
 argument-hint: "<task-id> [correction or instruction]"
 disable-model-invocation: true
 ---
 
-# Resume a development run
+# Resume a workflow
 
-Resume an existing multi-agent development workflow.
+Resume the selected run in its recorded mode.
 
 Invocation:
 
 `/dispatch-resume $ARGUMENTS`
 
 The first argument is the task ID. Everything after it is an optional human correction, clarification, or instruction.
+
+Open with the SessionStart header once in chat. Use the current session title and Claude session ID (`${CLAUDE_SESSION_ID}`); if unnamed, label a short task description as a working title. If the runtime provides no ID, say so. Prefer the saved working title on resume. Always display the current chat's ID.
 
 ## Orchestrator responsibility
 
@@ -35,7 +37,9 @@ Locate:
 
 `.claude/personal/.dispatcher/runs/<task-id>/`
 
-Read state.md first. Apply the Agent continuity and focused handoffs and Reports and current state sections of sibling ../dispatch/SKILL.md as shared rules, without invoking GUIDED mode. When creating a specialist, dispatch it by its plugin-scoped agent type `dispatcher:<role>` (for example `dispatcher:architect`), never the bare role name, applying the Workflow settings > Agent models section of ../dispatch/SKILL.md, re-reading both settings files when creating it. Then read only:
+Read state.md first. If its mode is `ANALYSIS`, use the Resume section of sibling `../analyze/SKILL.md` and its completion criteria. Pass through the supplied correction or input. This branch ends here, before the development-specific validation and phase routing below. Previous GUIDED runs keep their original contracts, including ones whose task description mentioned analysis.
+
+For a development run, apply the Agent continuity and focused handoffs and Reports and current state sections of sibling ../dispatch/SKILL.md as shared rules, without invoking GUIDED mode. When creating a specialist, dispatch it by its plugin-scoped agent type `dispatcher:<role>` (for example `dispatcher:architect`), never the bare role name, applying the Workflow settings > Agent models section of ../dispatch/SKILL.md, re-reading both settings files when creating it. Then read only:
 
 - current task-contract.md sections needed for the persisted phase, including approval and relevant policy;
 - applicable project-context.md sections when needed;

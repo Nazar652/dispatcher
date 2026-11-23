@@ -1,12 +1,13 @@
 # dispatcher
 
-A Claude Code plugin that adds a guided, multi-agent development workflow. The `/dispatch` command takes a task through an architect, a developer, a manual tester and reviewers. Every stage ends with a written report, and you approve the plan and the result.
+A Claude Code plugin for guided development and project analysis. The `/dispatch` command takes a task through an architect, a developer, a manual tester and reviewers. Every stage ends with a written report, and you approve the plan and the result.
 
 ## What's inside
 
 | Command | What it does |
 |---|---|
 | `/dispatch <task>` | Starts the development workflow for a task |
+| `/analyze <question>` | Answers a project question with evidence or runs a resumable investigation |
 | `/dispatch-status [task-id]` | Shows the state of a run without changing anything |
 | `/dispatch-resume <task-id>` | Resumes an interrupted run from its last saved checkpoint |
 | `/dispatch-cancel <task-id>` | Permanently cancels a run |
@@ -16,6 +17,14 @@ A Claude Code plugin that adds a guided, multi-agent development workflow. The `
 If a short name is taken by another command, use the full one, for example `/dispatcher:dispatch`.
 
 The agents are `architect`, `developer`, `manual-tester`, `code-reviewer`, `security-reviewer`, `database-reviewer` and `researcher`, all prefixed with `dispatcher:`.
+
+## Project analysis
+
+Use `/analyze How does customer matching work?` for an answer with references to the relevant code. A larger investigation such as `/analyze Compare draft quality before and after style notes` keeps its questions, data sources, calculations and checks in a run directory. Use the task ID printed in chat with `/dispatch-status`, `/dispatch-resume` or `/dispatch-cancel`. Analysis finishes when the questions are addressed and the requested deliverable is verified.
+
+At the start of a new or resumed main chat, the first reply includes the current Claude session ID and name. If Claude Code supplies no title, the reply uses a labeled working title based on the task. The session ID identifies the chat. The task ID identifies the saved workflow across chats.
+
+On a managed machine or a Team/Enterprise login, Claude Code's built-in guard skips `classic.SessionStart` from personally installed hook modules. Automatic greetings and analysis restoration there require enabling dispatcher as an organization plugin. The original command hook still restores guided development runs where Python is available. The explicit workflow commands include their own session header, and `/dispatch-resume <task-id>` reads the saved checkpoint in either mode. [Claude Code mod administration](https://code.claude.com/docs/en/plugins/mods/admin#know-which-hooks-of-a-users-mod-dont-run)
 
 ## Installation
 
@@ -45,15 +54,14 @@ claude --plugin-dir /path/to/repo
 
 ## Requirements
 
-- `python3` 3.9 or newer on `PATH`, for one hook only: the reminder after `/compact` or `/resume`. The other hooks are TypeScript that Claude Code runs itself and need nothing installed. Without `python3` that reminder is not delivered; continue the run with `/dispatch-resume <task-id>`.
+- Claude Code with support for TypeScript hook modules. Python 3.9+ on `PATH` as `python3` is used only by the original guided restoration command on compact and resume.
 - Access to the Opus, Sonnet and Haiku models. By default the architect and the security and database reviewers run on Opus, the developer and code reviewer on Sonnet, and the manual tester and researcher on Haiku; see Settings to change this.
 - Recommended: the Playwright plugin, which the manual tester uses for browser checks. Without it the tester falls back to the CLI and API. Install it with `claude plugin install playwright@claude-plugins-official`.
 
 ### Windows, Linux and WSL
 
-- Windows: the report guard and the model settings read `C:\...` paths with either separator, and the global settings come from `HOME` or, when that is not a Windows path, `USERPROFILE`. Check that `python3 --version` works in the shell Claude Code uses for hooks. The Microsoft Store `python3` shortcut that only opens the Store does not count: turn it off under App execution aliases, or install Python so that `python3` runs it.
-- Linux: minimal images often have no `python3`; install version 3.9 or newer for the reminder hook.
-- WSL: install and run Claude Code inside WSL and it behaves as on Linux, with Linux paths and the WSL `python3`.
+- Windows: local drive paths support both separators. The global settings come from `HOME` or, when that is not a Windows path, `USERPROFILE`.
+- WSL: run Claude Code inside WSL to use Linux paths and settings.
 - Known limitation: the architect, manual tester, reviewers and researcher cannot write their reports when the project is reached through a symbolic link, a junction, a mapped network drive, a `subst` drive or a network path. Open the project by its real local path.
 - If a specialist's report write fails with `Report write denied: ...`, the text names the check that refused it. Right after setup on a new platform, the architect's first report is a quick test that the guard accepts your paths.
 
@@ -125,16 +133,17 @@ The repository root is the plugin. Claude Code only installs plugins from a mark
 ```
 .claude-plugin/plugin.json           plugin manifest
 .claude-plugin/marketplace.json      one-entry marketplace (dispatcher)
-skills/                              dispatch, dispatch-status, dispatch-resume, dispatch-cancel,
+skills/                              analyze, dispatch, dispatch-status, dispatch-resume, dispatch-cancel,
                                      dispatch-settings, dispatch-global-settings
 agents/                              the seven specialist agents
 hooks/hooks.json                     plugin hooks
-hooks/index.ts                       hooks module entry: registers agent-models, context-usage and report-guard
+hooks/index.ts                       registers the four hook modules
 hooks/agent-models.ts                agent.spawn hook that applies per-agent models and reads the role settings (tests next to it)
 hooks/context-usage.ts               tool.call hook that measures each dispatcher agent's context (tests next to it)
 hooks/report-guard.ts                tool.call and tool.check hooks that limit specialists' writes to their own new reports (tests next to it)
 hooks/paths.ts                       path helpers for POSIX and Windows paths, shared by the hooks (tests next to it)
-scripts/                             the Python script of the post-compaction reminder hook
+hooks/session-start.ts               chat greeting and analysis restoration
+scripts/restore_dispatch_orchestrator.py  original command hook for guided restoration on compact and resume
 ```
 
 Hooks:
@@ -142,4 +151,4 @@ Hooks:
 - `agent-models.ts` (`agent.spawn`) sets the model of each fresh `dispatcher:*` agent from the settings files, unless the orchestrator passed one explicitly.
 - `context-usage.ts` (`tool.call`, `turn.complete`) measures the context of each `dispatcher:*` agent from the engine's own token count. It shows the agent itself a `dispatcher context usage` line after its tool results only from 80% of its limit; at the limit the line says it is reached. Each time such an agent's run ends, in the background, foreground or resumed, it also adds one line to the main conversation as a model-only reminder, so `/dispatch` records a measured number; it never changes the completion notification or the agent's report. The limit is the role's `context` setting (default 500,000), held to the model's window. It only reports and never blocks a tool.
 - `report-guard.ts` (`tool.call` on Write and Edit, `tool.check` on Write) lets the architect, manual tester, reviewers and researcher only create their own new report in `.claude/personal/.dispatcher/runs/<task>/reports/<role>/`, in a run the orchestrator has initialized; any other Write or Edit by them is refused with `Report write denied: ...`. It allows a valid report without a permission prompt, but your own deny and ask rules still apply. If the check itself fails, the call is refused. It does not affect the main session, the `developer` agent or any other agent.
-- `restore_dispatch_orchestrator.py` (SessionStart after compact or resume) reminds the main session of its orchestrator role. It only fires in a session that actually started `/dispatch`.
+- `session-start.ts` (`classic.SessionStart`) supplies the opening header on startup, clear, fork and resume. On compact or resume it also restores an active analysis run registered to that session.

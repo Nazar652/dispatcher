@@ -15,7 +15,7 @@ Open with the SessionStart header once in chat. Use the current session title an
 
 ## Session-scoped role restoration
 
-The SessionStart hook introduces new and resumed chats. Separately, on compaction or resume it restores the workflow recorded in an active registration for the exact session. Reading this file as policy data does not activate it. This is a role reminder after compaction/resume, not a context-size limit or a tool-permission guard.
+The SessionStart hook adds the header only when a session with an active `/dispatch` or `/analyze` registration is resumed or compacted, and never greets ordinary chats. Separately, on compaction or resume it restores the workflow recorded in an active registration for the exact session. Reading this file as policy data does not activate it. This is a role reminder after compaction/resume, not a context-size limit or a tool-permission guard.
 
 The current invocation's runtime session ID is `${CLAUDE_SESSION_ID}`. After resolving the project root and creating the run's initial state, and before the first specialist delegation, use native Write to create `<run>/orchestrator-session.json` with exactly this small registration (substitute the actual runtime ID):
 

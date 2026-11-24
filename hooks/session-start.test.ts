@@ -1,4 +1,4 @@
-import { restoreAnalysis } from './session-start'
+import { analysisReminder, registeredRuns } from './session-start'
 import type { EngineInterface, On } from 'claude-code'
 import { expect, test } from 'claude-code/testing'
 
@@ -36,44 +36,67 @@ function savedRuns(on: On, root: string, fixtures: Record<string, Fixture>) {
   downstream(on)
 }
 
+const root = '/work/app'
+const guided = { ...active, workflow: 'dispatch' }
+const fields = { session_id: sessionId, cwd: root + '/src' }
+
 for (const source of ['startup', 'clear', 'fork'] as const) {
-  test(source + ' adds the current identity and preserves downstream output', async ($, on) => {
-    downstream(on)
-    const event = { source, session_id: sessionId }
-    const result = await $.classic.SessionStart({ ...event, session_title: 'Аналіз даних' })
-    expect(result.additionalContext?.length).toBe(2)
-    expect(result.additionalContext?.[0]).toBe(otherContext)
-    expect(result.additionalContext?.[1]).toContain(sessionId)
-    expect(result.additionalContext?.[1]).toContain('Аналіз даних')
+  test(source + ' adds no header even for a registered session and preserves downstream output', async ($, on) => {
+    savedRuns(on, root, {
+      analysis: { marker: JSON.stringify(active) },
+      development: { marker: JSON.stringify(guided) },
+    })
+    const result = await $.classic.SessionStart({ ...fields, source, session_title: 'Аналіз даних' })
+    expect(result.additionalContext).toEqual([otherContext])
     expect(result.watchPaths).toEqual(['/watch'])
-    expect((await $.classic.SessionStart(event)).additionalContext?.[1]).toContain('working title')
   })
 }
 
-const root = '/work/app'
-test('restores only analysis runs on resume and compact', async ($, on) => {
-  savedRuns(on, root, {
-    current: { marker: '\uFEFF' + JSON.stringify(active), state: 'STATUS: RUNNING' },
-    guided: { marker: JSON.stringify({ ...active, workflow: 'dispatch' }) },
-    invalid: { marker: '{' },
-    oversized: { marker: JSON.stringify(active).padEnd(4200) },
-    foreign: { marker: JSON.stringify({ ...active, session_id: 'other' }) },
-    inactive: { marker: JSON.stringify({ ...active, active: false }) },
-    done: { marker: JSON.stringify(active), state: '\uFEFF- **Status**: DONE' },
-    cancelled: { marker: JSON.stringify(active), state: 'STATUS: CANCELLED' },
+for (const source of ['resume', 'compact'] as const) {
+  test(source + ' adds no header without an active registration for this session', async ($, on) => {
+    savedRuns(on, root, {
+      invalid: { marker: '{' },
+      oversized: { marker: JSON.stringify(active).padEnd(4200) },
+      foreign: { marker: JSON.stringify({ ...active, session_id: 'other' }) },
+      inactive: { marker: JSON.stringify({ ...active, active: false }) },
+      unknown: { marker: JSON.stringify({ ...active, workflow: 'other' }) },
+      done: { marker: JSON.stringify(guided), state: '\uFEFF- **Status**: DONE' },
+      cancelled: { marker: JSON.stringify(active), state: 'STATUS: CANCELLED' },
+    })
+    const result = await $.classic.SessionStart({ ...fields, source })
+    expect(result.additionalContext).toEqual([otherContext])
+    expect(result.watchPaths).toEqual(['/watch'])
   })
-  const fields = { session_id: sessionId, cwd: root + '/src' }
-  const compact = await $.classic.SessionStart({ ...fields, source: 'compact' })
-  expect(compact.additionalContext?.length).toBe(2)
-  const role = compact.additionalContext?.[1] ?? ''
-  expect(role).toContain('ANALYSIS')
-  expect(role.replace(/\\/g, '/')).toContain('/current/state.md')
-  expect(role).not.toContain('Multiple')
-  const resume = await $.classic.SessionStart({ ...fields, source: 'resume' })
-  expect(resume.additionalContext?.length).toBe(2)
-  expect(resume.additionalContext?.[1]).toContain(sessionId)
-  expect(resume.additionalContext?.[1]).toContain(role)
-})
+
+  test(source + ' adds only the header for a dispatch registration', async ($, on) => {
+    savedRuns(on, root, { development: { marker: JSON.stringify(guided), state: 'STATUS: RUNNING' } })
+    const result = await $.classic.SessionStart({ ...fields, source, session_title: 'Аналіз даних' })
+    expect(result.additionalContext?.length).toBe(2)
+    expect(result.additionalContext?.[0]).toBe(otherContext)
+    expect(result.additionalContext?.[1]).toContain('Begin your first visible reply')
+    expect(result.additionalContext?.[1]).toContain(sessionId)
+    expect(result.additionalContext?.[1]).toContain('Аналіз даних')
+    expect(result.additionalContext?.[1]).not.toContain('ANALYSIS')
+    expect(result.watchPaths).toEqual(['/watch'])
+    expect((await $.classic.SessionStart({ ...fields, source })).additionalContext?.[1]).toContain('working title')
+  })
+
+  test(source + ' adds the header and restores only analysis runs', async ($, on) => {
+    savedRuns(on, root, {
+      current: { marker: '\uFEFF' + JSON.stringify(active), state: 'STATUS: RUNNING' },
+      development: { marker: JSON.stringify(guided) },
+    })
+    const result = await $.classic.SessionStart({ ...fields, source })
+    expect(result.additionalContext?.length).toBe(2)
+    const context = result.additionalContext?.[1] ?? ''
+    expect(context).toContain('Begin your first visible reply')
+    expect(context).toContain(sessionId)
+    expect(context).toContain('Restore ANALYSIS')
+    expect(context.replace(/\\/g, '/')).toContain('/current/state.md')
+    expect(context).not.toContain('Multiple')
+    expect(context).not.toContain('/development/state.md')
+  })
+}
 
 test('finds the original project after a cwd change and reports competing registrations', async ($, on) => {
   savedRuns(on, '/original', {
@@ -87,14 +110,32 @@ test('finds the original project after a cwd change and reports competing regist
   expect(context).toContain('/b/state.md')
 })
 
-test('subagents get no header and guided restoration stays with the Python hook', async ($, on) => {
-  savedRuns(on, '/app', { guided: { marker: JSON.stringify({ ...active, workflow: 'dispatch' }) } })
-  const fields = { session_id: sessionId, cwd: '/app' }
+test('subagents and agent sessions get nothing', async ($, on) => {
+  savedRuns(on, root, {
+    analysis: { marker: JSON.stringify(active) },
+    development: { marker: JSON.stringify(guided) },
+  })
   for (const source of ['startup', 'resume', 'compact'] as const) {
-    const result = await $.classic.SessionStart({ ...fields, source, agent_id: 'child' })
-    expect(result.additionalContext).toEqual([otherContext])
+    for (const agent of [{ agent_id: 'child' }, { agent_type: 'reviewer' }]) {
+      const result = await $.classic.SessionStart({ ...fields, source, ...agent })
+      expect(result.additionalContext).toEqual([otherContext])
+      expect(result.watchPaths).toEqual(['/watch'])
+    }
   }
-  expect((await $.classic.SessionStart({ ...fields, source: 'compact' })).additionalContext).toEqual([otherContext])
+})
+
+test('analysis reminder ignores dispatch runs and names every competing analysis run', () => {
+  const run = (workflow: 'dispatch' | 'analyze', state: string) => ({ workflow, state })
+  expect(analysisReminder([])).toBeUndefined()
+  expect(analysisReminder([run('dispatch', '/a/state.md')])).toBeUndefined()
+  const single = analysisReminder([run('dispatch', '/a/state.md'), run('analyze', '/b/state.md')])
+  expect(single).toContain('Restore ANALYSIS')
+  expect(single).toContain('/b/state.md')
+  expect(single).not.toContain('/a/state.md')
+  const several = analysisReminder([run('analyze', '/b/state.md'), run('analyze', '/c/state.md')])
+  expect(several).toContain('Multiple')
+  expect(several).toContain('/b/state.md')
+  expect(several).toContain('/c/state.md')
 })
 
 test('resolves mixed-separator Windows paths from a nested working directory', async () => {
@@ -121,6 +162,6 @@ test('resolves mixed-separator Windows paths from a nested working directory', a
       },
     },
   } as unknown as EngineInterface
-  expect(await restoreAnalysis(engine, project + '/src', sessionId)).toContain(state)
+  expect(analysisReminder(await registeredRuns(engine, project + '/src', sessionId))).toContain(state)
   expect(directoriesListed).toEqual([runs])
 })

@@ -22,9 +22,9 @@ The agents are `architect`, `developer`, `manual-tester`, `code-reviewer`, `secu
 
 Use `/analyze How does customer matching work?` for an answer with references to the relevant code. A larger investigation such as `/analyze Compare draft quality before and after style notes` keeps its questions, data sources, calculations and checks in a run directory. Use the task ID printed in chat with `/dispatch-status`, `/dispatch-resume` or `/dispatch-cancel`. Analysis finishes when the questions are addressed and the requested deliverable is verified.
 
-At the start of a new or resumed main chat, the first reply includes the current Claude session ID and name. If Claude Code supplies no title, the reply uses a labeled working title based on the task. The session ID identifies the chat. The task ID identifies the saved workflow across chats.
+The first reply of `/dispatch`, `/analyze` and `/dispatch-resume` includes the current Claude session ID and name. When a chat with an active dispatcher run registered to it is resumed or compacted, the plugin adds the same header; ordinary chats get none. If Claude Code supplies no title, the reply uses a labeled working title based on the task. The session ID identifies the chat. The task ID identifies the saved workflow across chats.
 
-On a managed machine or a Team/Enterprise login, Claude Code's built-in guard skips `classic.SessionStart` from personally installed hook modules. Automatic greetings and analysis restoration there require enabling dispatcher as an organization plugin. The original command hook still restores guided development runs where Python is available. The explicit workflow commands include their own session header, and `/dispatch-resume <task-id>` reads the saved checkpoint in either mode. [Claude Code mod administration](https://code.claude.com/docs/en/plugins/mods/admin#know-which-hooks-of-a-users-mod-dont-run)
+On a managed machine or a Team/Enterprise login, Claude Code's built-in guard skips `classic.SessionStart` from personally installed hook modules. The header on resumed dispatcher chats and analysis restoration there require enabling dispatcher as an organization plugin. The original command hook still restores guided development runs where Python is available. The explicit workflow commands include their own session header, and `/dispatch-resume <task-id>` reads the saved checkpoint in either mode. [Claude Code mod administration](https://code.claude.com/docs/en/plugins/mods/admin#know-which-hooks-of-a-users-mod-dont-run)
 
 ## Installation
 
@@ -142,7 +142,7 @@ hooks/agent-models.ts                agent.spawn hook that applies per-agent mod
 hooks/context-usage.ts               tool.call hook that measures each dispatcher agent's context (tests next to it)
 hooks/report-guard.ts                tool.call and tool.check hooks that limit specialists' writes to their own new reports (tests next to it)
 hooks/paths.ts                       path helpers for POSIX and Windows paths, shared by the hooks (tests next to it)
-hooks/session-start.ts               chat greeting and analysis restoration
+hooks/session-start.ts               session header for dispatcher chats and analysis restoration
 scripts/restore_dispatch_orchestrator.py  original command hook for guided restoration on compact and resume
 ```
 
@@ -151,4 +151,4 @@ Hooks:
 - `agent-models.ts` (`agent.spawn`) sets the model of each fresh `dispatcher:*` agent from the settings files, unless the orchestrator passed one explicitly.
 - `context-usage.ts` (`tool.call`, `turn.complete`) measures the context of each `dispatcher:*` agent from the engine's own token count. It shows the agent itself a `dispatcher context usage` line after its tool results only from 80% of its limit; at the limit the line says it is reached. Each time such an agent's run ends, in the background, foreground or resumed, it also adds one line to the main conversation as a model-only reminder, so `/dispatch` records a measured number; it never changes the completion notification or the agent's report. The limit is the role's `context` setting (default 500,000), held to the model's window. It only reports and never blocks a tool.
 - `report-guard.ts` (`tool.call` on Write and Edit, `tool.check` on Write) lets the architect, manual tester, reviewers and researcher only create their own new report in `.claude/personal/.dispatcher/runs/<task>/reports/<role>/`, in a run the orchestrator has initialized; any other Write or Edit by them is refused with `Report write denied: ...`. It allows a valid report without a permission prompt, but your own deny and ask rules still apply. If the check itself fails, the call is refused. It does not affect the main session, the `developer` agent or any other agent.
-- `session-start.ts` (`classic.SessionStart`) supplies the opening header on startup, clear, fork and resume. On compact or resume it also restores an active analysis run registered to that session.
+- `session-start.ts` (`classic.SessionStart`) supplies the opening header on compact or resume, only for a session with an active `/dispatch` or `/analyze` registration, and adds nothing on startup, clear or fork. On compact or resume it also restores an active analysis run registered to that session.
